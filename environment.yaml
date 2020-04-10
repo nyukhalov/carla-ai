@@ -1,0 +1,7 @@
+name: carla-ai
+dependencies:
+  - python=3.7
+  - numpy
+  - pip:
+    - pygame
+

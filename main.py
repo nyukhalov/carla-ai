@@ -3,8 +3,7 @@ import time
 import carla
 
 def draw_bbox(debug, obj):
-    bbox_location = obj.get_transform().location
-    bbox_location.z += obj.bounding_box.extent.z
+    bbox_location = obj.get_transform().location + obj.bounding_box.location
     debug.draw_box(
         carla.BoundingBox(bbox_location, obj.bounding_box.extent),
         obj.get_transform().rotation,

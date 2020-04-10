@@ -38,6 +38,10 @@ def main():
     print(type(veh))
     print(dir(veh))
 
+    spectator = world.get_spectator()
+    transform = veh.get_transform()
+    spectator.set_transform(carla.Transform(transform.location + carla.Location(z=50), carla.Rotation(pitch=-90)))
+
     debug = world.debug
     while(True):
         draw_bbox(debug, veh)

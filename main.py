@@ -22,7 +22,11 @@ def main():
     for avail_map in available_maps:
         print(f'- {avail_map}')
 
-    world = client.load_world('Town01')
+    # set map
+    world = client.load_world('Town02')
+
+    # set weather
+    world.set_weather(carla.WeatherParameters.ClearNoon)
 
     bp_lib = world.get_blueprint_library()
     cur_map = world.get_map()

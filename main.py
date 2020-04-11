@@ -1,3 +1,4 @@
+import traceback
 import random
 from typing import Tuple
 import weakref
@@ -38,13 +39,70 @@ def draw_waypoint(debug, wp: carla.Waypoint, color: carla.Color, life_time: floa
         life_time
     )
 
-class HUD(object):
+
+class Simulation(object):
     def __init__(self, display_size: Tuple[int, int], world: carla.World):
-        self.display_size = display_size
         self.world = world
+        self.surface = None
+
+        bp_lib = world.get_blueprint_library()
+
+        ego_car_bp = random.choice(bp_lib.filter('vehicle.toyota.prius'))
+        ego_car_transform = random.choice(world.get_map().get_spawn_points())
+
+        self.ego_car = world.spawn_actor(ego_car_bp, ego_car_transform)
+        self.ego_car.set_autopilot(True)
+
+        # add 3rd-person view camera
+        cam_bp = bp_lib.find('sensor.camera.rgb')
+        cam_bp.set_attribute('image_size_x', str(display_size[0]))
+        cam_bp.set_attribute('image_size_y', str(display_size[1]))
+        self.sensor = world.spawn_actor(
+            cam_bp,
+            carla.Transform(carla.Location(x=-5.5, z=2.5), carla.Rotation(pitch=8.0)),
+            attach_to=self.ego_car,
+            attachment_type=carla.AttachmentType.SpringArm
+        )
+        weak_self = weakref.ref(self)
+        self.sensor.listen(lambda image: Simulation.parse_image(weak_self, image))
+
+    def tick(self, clock: pygame.time.Clock):
+        pass
+
+    def render(self, display):
+        if self.surface is not None:
+            display.blit(self.surface, (0,0))
+
+    def destroy(self):
+        actors = [
+            self.sensor,
+            self.ego_car
+        ]
+        for actor in actors:
+            actor.destroy()
+
+    @staticmethod
+    def parse_image(weak_self, image):
+        self = weak_self()
+        if not self:
+            return
+        image.convert(cc.Raw)
+        array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
+        array = np.reshape(array, (image.height, image.width, 4))
+        array = array[:, :, :3]
+        array = array[:, :, ::-1]
+        self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
+
+
+
+class HUD(object):
+    def __init__(self, display_size: Tuple[int, int], sim: Simulation):
+        self.display_size = display_size
+        self.sim = sim
+        self.world = sim.world
 
         # cache the map, as calling the method inside the tick/render method significantly reduces FPS
-        self.map = world.get_map()
+        self.map = self.world.get_map()
 
         self.text = None
         self._server_clock = pygame.time.Clock()
@@ -66,11 +124,25 @@ class HUD(object):
         self._server_clock.tick()
 
     def tick(self, clock: pygame.time.Clock):
+        max_len = 17
+        ego_transform = self.sim.ego_car.get_transform()
+        ego_location = ego_transform.location
+        ego_heading = ego_transform.rotation.yaw
         self.text = [
-            f'Server FPS: {self._server_clock.get_fps()}',
-            f'Client FPS: {clock.get_fps()}',
-            f'Map:        {self.map.name}'
+            f'Server FPS: {self._server_clock.get_fps():.0f}',
+            f'Client FPS: {clock.get_fps():.0f}',
+            f'Map:        {self.map.name}',
+            '',
+            'Localization:',
+            self._format_text_item(f'x:   {ego_location.x:.3f}', 'm', max_len),
+            self._format_text_item(f'y:   {ego_location.y:.3f}', 'm', max_len),
+            self._format_text_item(f'yaw: {ego_heading:.3f}', 'deg', max_len),
         ]
+
+    def _format_text_item(self, text: str, r_suffix: str, max_len: int):
+        to_fill = max_len - len(text) - len(r_suffix)
+        return text + ' '*to_fill + r_suffix
+
 
     def render(self, display):
         # tinted background
@@ -86,39 +158,14 @@ class HUD(object):
 
 class Game(object):
     def __init__(self, world: carla.World, display_size: Tuple[int, int]):
-        self.surface = None
-        self.world = world
-        self.debug = world.debug
-        self.display_size = display_size
-
-        self.hud = HUD(display_size, world)
-
         # set weather
         world.set_weather(carla.WeatherParameters.ClearNoon)
 
-        self.cur_map = world.get_map()
-
-        bp_lib = world.get_blueprint_library()
-        veh_bp = random.choice(bp_lib.filter('vehicle.toyota.prius'))
-        transform = random.choice(self.cur_map.get_spawn_points())
-
-        self.veh = world.spawn_actor(veh_bp, transform)
-        self.veh.set_autopilot(True)
-
-        # add 3rd-person view camera
-        weak_self = weakref.ref(self)
-        cam_bp = bp_lib.find('sensor.camera.rgb')
-        cam_bp.set_attribute('image_size_x', str(self.display_size[0]))
-        cam_bp.set_attribute('image_size_y', str(self.display_size[1]))
-        self.sensor = world.spawn_actor(
-            cam_bp,
-            carla.Transform(carla.Location(x=-5.5, z=2.5), carla.Rotation(pitch=8.0)),
-            attach_to=self.veh,
-            attachment_type=carla.AttachmentType.SpringArm
-        )
-        self.sensor.listen(lambda image: Game.parse_image(weak_self, image))
+        self.simulation = Simulation(display_size, world)
+        self.hud = HUD(display_size, self.simulation)
 
     def tick(self, clock: pygame.time.Clock):
+        self.simulation.tick(clock)
         self.hud.tick(clock)
 
     def render(self, display):
@@ -131,30 +178,11 @@ class Game(object):
 
         #draw_bbox(self.debug, veh)
 
-        if self.surface is not None:
-            display.blit(self.surface, (0,0))
+        self.simulation.render(display)
         self.hud.render(display)
 
     def destroy(self):
-        actors = [
-            self.sensor,
-            self.veh
-        ]
-        for actor in actors:
-            actor.destroy()
-
-
-    @staticmethod
-    def parse_image(weak_self, image):
-        self = weak_self()
-        if not self:
-            return
-        image.convert(cc.Raw)
-        array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
-        array = np.reshape(array, (image.height, image.width, 4))
-        array = array[:, :, :3]
-        array = array[:, :, ::-1]
-        self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
+        self.simulation.destroy()
 
 
 def main():
@@ -180,6 +208,7 @@ def main():
             pygame.display.flip()
     except Exception as e:
         print('Game loop has been interrupted by exception', e)
+        traceback.print_exc()
     finally:
         if game is not None:
             game.destroy()

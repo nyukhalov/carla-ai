@@ -1,4 +1,5 @@
 import traceback
+import collections
 import random
 from typing import Tuple
 import weakref
@@ -120,6 +121,10 @@ class HUD(object):
         mono = pygame.font.match_font(mono)
         self._font_mono = pygame.font.Font(mono, 14)
 
+        # init history circular buffers
+        self.history_acc = collections.deque(maxlen=200)
+        self.history_vel = collections.deque(maxlen=200)
+
     def on_world_tick(self, timestamp):
         self._server_clock.tick()
 
@@ -130,6 +135,10 @@ class HUD(object):
         ego_heading = ego_transform.rotation.yaw
         ego_vel = self.sim.ego_car.get_velocity()
         ego_acc = self.sim.ego_car.get_acceleration()
+
+        self.history_acc.append(ego_acc)
+        self.history_vel.append(ego_vel)
+
         self.text = [
             'Simulation',
             f'sFPS: {self._server_clock.get_fps():.0f}',
@@ -146,6 +155,7 @@ class HUD(object):
             self._format_text_item(f'x:   {ego_location.x:.3f}', 'm', max_len),
             self._format_text_item(f'y:   {ego_location.y:.3f}', 'm', max_len),
             self._format_text_item(f'yaw: {ego_heading:.3f}', 'deg', max_len),
+            ''
         ]
 
     def _format_text_item(self, text: str, r_suffix: str, max_len: int):
@@ -162,6 +172,28 @@ class HUD(object):
         for text_item in self.text:
             surface = self._font_mono.render(text_item, True, (255,255,255))
             display.blit(surface, (8, v_offset))
+            v_offset += 18
+
+        surface = self._font_mono.render('XY Velocity', True, (255,255,255))
+        display.blit(surface, (8, v_offset))
+
+        v_offset += 36
+        vel_x_points = [(x + 8, vel.x + v_offset) for x, vel in enumerate(self.history_vel)]
+        vel_y_points = [(x + 8, vel.y + v_offset) for x, vel in enumerate(self.history_vel)]
+        if len(vel_x_points) > 1:
+            pygame.draw.lines(display, (255, 136, 0), False, vel_x_points, 1)
+            pygame.draw.lines(display, (136, 255, 0), False, vel_y_points, 1)
+            v_offset += 18
+
+        surface = self._font_mono.render('XY Acceleration', True, (255,255,255))
+        display.blit(surface, (8, v_offset))
+
+        v_offset += 36
+        acc_x_points = [(x + 8, acc.x + v_offset) for x, acc in enumerate(self.history_acc)]
+        acc_y_points = [(x + 8, acc.y + v_offset) for x, acc in enumerate(self.history_acc)]
+        if len(acc_x_points) > 1:
+            pygame.draw.lines(display, (255, 136, 0), False, acc_x_points, 1)
+            pygame.draw.lines(display, (136, 255, 0), False, acc_y_points, 1)
             v_offset += 18
 
 

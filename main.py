@@ -128,10 +128,19 @@ class HUD(object):
         ego_transform = self.sim.ego_car.get_transform()
         ego_location = ego_transform.location
         ego_heading = ego_transform.rotation.yaw
+        ego_vel = self.sim.ego_car.get_velocity()
+        ego_acc = self.sim.ego_car.get_acceleration()
         self.text = [
-            f'Server FPS: {self._server_clock.get_fps():.0f}',
-            f'Client FPS: {clock.get_fps():.0f}',
-            f'Map:        {self.map.name}',
+            'Simulation',
+            f'sFPS: {self._server_clock.get_fps():.0f}',
+            f'cFPS: {clock.get_fps():.0f}',
+            f'Map:  {self.map.name}',
+            '',
+            'Vehicle State',
+            self._format_text_item(f'vx: {ego_vel.x:.3f}', 'm/s', max_len),
+            self._format_text_item(f'vy: {ego_vel.y:.3f}', 'm/s', max_len),
+            self._format_text_item(f'ax: {ego_acc.x:.3f}', 'm/s2', max_len),
+            self._format_text_item(f'ay: {ego_acc.y:.3f}', 'm/s2', max_len),
             '',
             'Localization:',
             self._format_text_item(f'x:   {ego_location.x:.3f}', 'm', max_len),
@@ -195,7 +204,7 @@ def main():
     game = None
     try:
         client = carla.Client('localhost', 2000)
-        client.set_timeout(2.0) # seconds
+        client.set_timeout(5.0) # seconds
         client.load_world(map_name)
 
         game = Game(client.get_world(), (W,H))

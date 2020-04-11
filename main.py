@@ -38,6 +38,51 @@ def draw_waypoint(debug, wp: carla.Waypoint, color: carla.Color, life_time: floa
         life_time
     )
 
+class HUD(object):
+    def __init__(self, display_size: Tuple[int, int], world: carla.World):
+        self.display_size = display_size
+        self.world = world
+
+        # cache the map, as calling the method inside the tick/render method significantly reduces FPS
+        self.map = world.get_map()
+
+        self.text = None
+        self._server_clock = pygame.time.Clock()
+
+        self.world.on_tick(self.on_world_tick)
+
+        self.background_surface = pygame.Surface((220, self.display_size[1]))
+        self.background_surface.set_alpha(100)
+
+        # initializing fonts
+        font_name = 'mono'
+        fonts = [x for x in pygame.font.get_fonts() if font_name in x]
+        default_font = 'ubuntumono'
+        mono = default_font if default_font in fonts else fonts[0]
+        mono = pygame.font.match_font(mono)
+        self._font_mono = pygame.font.Font(mono, 14)
+
+    def on_world_tick(self, timestamp):
+        self._server_clock.tick()
+
+    def tick(self, clock: pygame.time.Clock):
+        self.text = [
+            f'Server FPS: {self._server_clock.get_fps()}',
+            f'Client FPS: {clock.get_fps()}',
+            f'Map:        {self.map.name}'
+        ]
+
+    def render(self, display):
+        # tinted background
+        display.blit(self.background_surface, (0,0))
+
+        # text items
+        v_offset = 4
+        for text_item in self.text:
+            surface = self._font_mono.render(text_item, True, (255,255,255))
+            display.blit(surface, (8, v_offset))
+            v_offset += 18
+
 
 class Game(object):
     def __init__(self, world: carla.World, display_size: Tuple[int, int]):
@@ -45,6 +90,8 @@ class Game(object):
         self.world = world
         self.debug = world.debug
         self.display_size = display_size
+
+        self.hud = HUD(display_size, world)
 
         # set weather
         world.set_weather(carla.WeatherParameters.ClearNoon)
@@ -58,10 +105,7 @@ class Game(object):
         self.veh = world.spawn_actor(veh_bp, transform)
         self.veh.set_autopilot(True)
 
-        #spectator = world.get_spectator()
-        #transform = self.veh.get_transform()
-        #spectator.set_transform(carla.Transform(transform.location + carla.Location(z=50), carla.Rotation(pitch=-90)))
-
+        # add 3rd-person view camera
         weak_self = weakref.ref(self)
         cam_bp = bp_lib.find('sensor.camera.rgb')
         cam_bp.set_attribute('image_size_x', str(self.display_size[0]))
@@ -72,10 +116,10 @@ class Game(object):
             attach_to=self.veh,
             attachment_type=carla.AttachmentType.SpringArm
         )
-        self.sensor.listen(lambda image: Game._parse_image(weak_self, image))
+        self.sensor.listen(lambda image: Game.parse_image(weak_self, image))
 
     def tick(self, clock: pygame.time.Clock):
-        pass
+        self.hud.tick(clock)
 
     def render(self, display):
         # visualize a few nearest waypoints
@@ -89,6 +133,7 @@ class Game(object):
 
         if self.surface is not None:
             display.blit(self.surface, (0,0))
+        self.hud.render(display)
 
     def destroy(self):
         actors = [
@@ -100,7 +145,7 @@ class Game(object):
 
 
     @staticmethod
-    def _parse_image(weak_self, image):
+    def parse_image(weak_self, image):
         self = weak_self()
         if not self:
             return
@@ -113,7 +158,7 @@ class Game(object):
 
 
 def main():
-    W, H = [1024, 768]
+    W, H = [1280, 720]
     map_name = 'Town02'
 
     pygame.init()
@@ -133,7 +178,8 @@ def main():
             game.tick(clock)
             game.render(display)
             pygame.display.flip()
-
+    except Exception as e:
+        print('Game loop has been interrupted by exception', e)
     finally:
         if game is not None:
             game.destroy()

@@ -12,7 +12,7 @@ if __name__=='__main__':
     H=720
     display = pg.display.set_mode((W,H), pg.HWSURFACE | pg.DOUBLEBUF)
 
-    g = Graph((100, 100), (400, 300), 10.0)
+    g = Graph('Title', (100, 100), (400, 300), 10.0)
 
     clock = pg.time.Clock()
     offset = 0

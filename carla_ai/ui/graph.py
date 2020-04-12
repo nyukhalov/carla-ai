@@ -7,10 +7,11 @@ from ..draw import round_rect
 from ..ui import font
 
 class Graph(object):
-    def __init__(self, pos: Tuple[int, int], size: Tuple[int, int], lookback_time: float):
+    def __init__(self, title: str, pos: Tuple[int, int], size: Tuple[int, int], lookback_time: float):
         """
         @param: lookback_time: max time in sec that will be displayed on the x-axis
         """
+        self.title = title
         self.pos = pos
         self.size = size
         self.lookback_time = lookback_time
@@ -19,6 +20,7 @@ class Graph(object):
         self.inner_color = (30, 30, 30)
         self.radius = 6
         self.border = 1
+        self._font_title = font.make_mono_font(20)
         self._font_mono = font.make_mono_font(13)
 
     def render(self, display, data: deque):
@@ -41,6 +43,12 @@ class Graph(object):
             self.border,
             self.inner_color
         )
+
+        # title
+        title_surface = self._font_title.render(self.title, True, self.border_color)
+        title_x = self.size[0] // 2 - title_surface.get_width() // 2
+        title_y = 8
+        self.surface.blit(title_surface, (title_x, title_y))
 
         # find min/max data values
         min_val = data[0][1]

@@ -8,6 +8,7 @@ import carla
 from carla import ColorConverter as cc
 import pygame
 import numpy as np
+from carla_ai.ui import font
 
 def draw_bbox(debug, obj):
     bbox_location = obj.get_transform().location + obj.bounding_box.location
@@ -113,12 +114,7 @@ class HUD(object):
         self.background_surface.set_alpha(100)
 
         # initializing fonts
-        font_name = 'mono'
-        fonts = [x for x in pygame.font.get_fonts() if font_name in x]
-        default_font = 'ubuntumono'
-        mono = default_font if default_font in fonts else fonts[0]
-        mono = pygame.font.match_font(mono)
-        self._font_mono = pygame.font.Font(mono, 14)
+        self._font_mono = font.make_mono_font(14)
 
         # init history circular buffers
         self.history_acc = collections.deque(maxlen=200)

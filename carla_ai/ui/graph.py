@@ -4,6 +4,7 @@ import time
 import pygame as pg
 import numpy as np
 from ..draw import round_rect
+from ..ui import font
 
 class Graph(object):
     def __init__(self, pos: Tuple[int, int], size: Tuple[int, int], lookback_time: float):
@@ -18,6 +19,7 @@ class Graph(object):
         self.inner_color = (30, 30, 30)
         self.radius = 6
         self.border = 1
+        self._font_mono = font.make_mono_font(13)
 
     def render(self, display, data: deque):
         """
@@ -58,8 +60,16 @@ class Graph(object):
             1
         )
         for cut_no in range(grid[0]):
-            x = offset + (axis_width / (grid[0]-1)) * cut_no
+            # render axis
+            num_intervals = grid[0] - 1
+            x = offset + (axis_width / num_intervals) * cut_no
             pg.draw.line(self.surface, self.border_color, (x, axis_y), (x, axis_y + cut_len), 1)
+            # render labels
+            t = (-self.lookback_time / num_intervals) * (grid[0] - cut_no - 1)
+            label = f'{t:.1f}'
+            fnt_surface = self._font_mono.render(label, True, self.border_color)
+            fnt_hwidth = fnt_surface.get_width() // 2
+            self.surface.blit(fnt_surface, (x - fnt_hwidth, axis_y + 10))
 
         # y-axis
         pg.draw.line(self.surface, self.border_color, (offset, offset), (offset, axis_y), 1)
@@ -74,14 +84,18 @@ class Graph(object):
         for ts, val in data:
             min_val = min(min_val, val)
             max_val = max(max_val, val)
+        y_hi = max_val * 1.2
+        y_lo = min_val * 1.2
 
         # x-labels
         # y-labels
 
         # data
-        h_res =  loopback_ms / axis_width # horizontal resolution
-        v_res = abs(max_val - min_val) / axis_height # vertical resolution
         loopback_ms = int(self.lookback_time * 1000)
+
+        h_res =  loopback_ms / axis_width # horizontal resolution
+        v_res = abs(y_hi - y_lo) / axis_height # vertical resolution
+
         now_ms = time.time_ns() // 1000000 # ms
         last_ts = now_ms - loopback_ms # ms
 
@@ -94,8 +108,8 @@ class Graph(object):
 
             x1 = offset + int((ts1 - last_ts) / h_res)
             x2 = offset + int((ts2 - last_ts) / h_res)
-            y1 = offset + axis_height - int((val1 - min_val) / v_res)
-            y2 = offset + axis_height - int((val2 - min_val) / v_res)
+            y1 = offset + axis_height - int((val1 - y_lo) / v_res)
+            y2 = offset + axis_height - int((val2 - y_lo) / v_res)
 
             pg.draw.line(self.surface, (0,255,0), (x1,y1), (x2,y2), 1)
 

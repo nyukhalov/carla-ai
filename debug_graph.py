@@ -12,7 +12,10 @@ if __name__=='__main__':
     H=720
     display = pg.display.set_mode((W,H), pg.HWSURFACE | pg.DOUBLEBUF)
 
-    g = Graph('Title', (100, 100), (400, 300), 10.0, xlabel='Time (sec)', ylabel='meters')
+    g = Graph((100, 100), (400, 300), 10.0)
+    g.set_title('Title')
+    g.set_xlabel('Time (sec)')
+    g.set_ylabel('meters')
 
     clock = pg.time.Clock()
     offset = 0

@@ -8,10 +8,10 @@ from ..ui import font
 
 class Graph(object):
     def __init__(self,
-            title: str,
             pos: Tuple[int, int],
             size: Tuple[int, int],
             lookback_time: float,
+            title: Optional[str] = None,
             xlabel: Optional[str] = None,
             ylabel: Optional[str] = None
         ):
@@ -32,6 +32,15 @@ class Graph(object):
         self._font_title = font.make_mono_font(20)
         self._font_label = font.make_mono_font(13)
         self._font_mono = font.make_mono_font(13)
+
+    def set_xlabel(self, xlabel: str):
+        self.xlabel = xlabel
+
+    def set_ylabel(self, ylabel: str):
+        self.ylabel = ylabel
+
+    def set_title(self, title: str):
+        self.title = title
 
     def render(self, display, data: deque):
         """
@@ -55,10 +64,11 @@ class Graph(object):
         )
 
         # title
-        title_surface = self._font_title.render(self.title, True, self.border_color)
-        title_x = self.size[0] // 2 - title_surface.get_width() // 2
-        title_y = 8
-        self.surface.blit(title_surface, (title_x, title_y))
+        if self.title:
+            title_surface = self._font_title.render(self.title, True, self.border_color)
+            title_x = self.size[0] // 2 - title_surface.get_width() // 2
+            title_y = 8
+            self.surface.blit(title_surface, (title_x, title_y))
 
         # xlabel
         if self.xlabel:

@@ -71,7 +71,7 @@ class Graph(object):
         if self.ylabel:
             fnt_surface = self._font_label.render(self.ylabel, True, self.border_color)
             fnt_surface = pg.transform.rotate(fnt_surface, 90)
-            ylabel_x = 8
+            ylabel_x = 6
             ylabel_y = self.size[1] // 2 - fnt_surface.get_height() // 2
             self.surface.blit(fnt_surface, (ylabel_x, ylabel_y))
 
@@ -86,25 +86,28 @@ class Graph(object):
 
         # axis
         grid = (7, 5)
-        offset = 70
+        left_offset = 70
+        right_offset = 20
+        top_offset = 40
+        bottom_offset = 50
 
         cut_len = 4
-        axis_height = self.size[1] - offset - offset
-        axis_width = self.size[0] - offset - offset
-        axis_y = offset + axis_height
+        axis_height = self.size[1] - top_offset - bottom_offset
+        axis_width = self.size[0] - left_offset - right_offset
+        axis_y = top_offset + axis_height
 
         # x-axis
         pg.draw.line(
             self.surface,
             self.border_color,
-            (offset, axis_y),
-            (offset + axis_width, axis_y),
+            (left_offset, axis_y),
+            (left_offset + axis_width, axis_y),
             1
         )
         for cut_no in range(grid[0]):
             # render axis
             num_intervals = grid[0] - 1
-            x = offset + (axis_width / num_intervals) * cut_no
+            x = left_offset + (axis_width / num_intervals) * cut_no
             pg.draw.line(self.surface, self.border_color, (x, axis_y), (x, axis_y + cut_len), 1)
             # render labels
             t = (-self.lookback_time / num_intervals) * (grid[0] - cut_no - 1)
@@ -114,19 +117,19 @@ class Graph(object):
             self.surface.blit(fnt_surface, (x - fnt_hwidth, axis_y + 10))
 
         # y-axis
-        pg.draw.line(self.surface, self.border_color, (offset, offset), (offset, axis_y), 1)
+        pg.draw.line(self.surface, self.border_color, (left_offset, top_offset), (left_offset, axis_y), 1)
         for cut_no in range(grid[1]):
             # render axis
             num_intervals = grid[1] - 1
-            y = offset + (axis_height / num_intervals) * cut_no
-            pg.draw.line(self.surface, self.border_color, (offset-cut_len, y), (offset, y), 1)
+            y = top_offset + (axis_height / num_intervals) * cut_no
+            pg.draw.line(self.surface, self.border_color, (left_offset-cut_len, y), (left_offset, y), 1)
             # render labels
             v = y_hi - (cut_no * (y_hi - y_lo) / num_intervals)
             label = f'{v:.1f}'
             fnt_surface = self._font_mono.render(label, True, self.border_color)
             fnt_hheight = fnt_surface.get_height() // 2
             fnt_width = fnt_surface.get_width()
-            self.surface.blit(fnt_surface, (offset - 10 - fnt_width, y - fnt_hheight))
+            self.surface.blit(fnt_surface, (left_offset - 10 - fnt_width, y - fnt_hheight))
 
         # data
         loopback_ms = int(self.lookback_time * 1000)
@@ -144,10 +147,10 @@ class Graph(object):
             if ts1 < last_ts or ts2 < last_ts:
                 break
 
-            x1 = offset + int((ts1 - last_ts) / h_res)
-            x2 = offset + int((ts2 - last_ts) / h_res)
-            y1 = offset + axis_height - int((val1 - y_lo) / v_res)
-            y2 = offset + axis_height - int((val2 - y_lo) / v_res)
+            x1 = left_offset + int((ts1 - last_ts) / h_res)
+            x2 = left_offset + int((ts2 - last_ts) / h_res)
+            y1 = top_offset + axis_height - int((val1 - y_lo) / v_res)
+            y2 = top_offset + axis_height - int((val2 - y_lo) / v_res)
 
             pg.draw.line(self.surface, (0,255,0), (x1,y1), (x2,y2), 1)
 

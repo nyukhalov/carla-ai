@@ -60,12 +60,20 @@ class Graph(object):
         title_y = 8
         self.surface.blit(title_surface, (title_x, title_y))
 
-        # x-label
+        # xlabel
         if self.xlabel:
             fnt_surface = self._font_label.render(self.xlabel, True, self.border_color)
             xlabel_x = self.size[0] // 2 - fnt_surface.get_width() // 2
             xlabel_y = self.size[1] - fnt_surface.get_height() - 8
             self.surface.blit(fnt_surface, (xlabel_x, xlabel_y))
+
+        # ylabel
+        if self.ylabel:
+            fnt_surface = self._font_label.render(self.ylabel, True, self.border_color)
+            fnt_surface = pg.transform.rotate(fnt_surface, 90)
+            ylabel_x = 8
+            ylabel_y = self.size[1] // 2 - fnt_surface.get_height() // 2
+            self.surface.blit(fnt_surface, (ylabel_x, ylabel_y))
 
         # find min/max data values
         min_val = data[0][1]
@@ -78,7 +86,7 @@ class Graph(object):
 
         # axis
         grid = (7, 5)
-        offset = 50
+        offset = 70
 
         cut_len = 4
         axis_height = self.size[1] - offset - offset

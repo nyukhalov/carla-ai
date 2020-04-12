@@ -42,9 +42,18 @@ class Graph(object):
             self.inner_color
         )
 
+        # find min/max data values
+        min_val = data[0][1]
+        max_val = data[0][1]
+        for ts, val in data:
+            min_val = min(min_val, val)
+            max_val = max(max_val, val)
+        y_hi = max_val * 1.2
+        y_lo = min_val * 1.2
+
         # axis
         grid = (7, 5)
-        offset = 32
+        offset = 50
 
         cut_len = 4
         axis_height = self.size[1] - offset - offset
@@ -74,21 +83,17 @@ class Graph(object):
         # y-axis
         pg.draw.line(self.surface, self.border_color, (offset, offset), (offset, axis_y), 1)
         for cut_no in range(grid[1]):
-            y = offset + (axis_height / (grid[1]-1)) * cut_no
+            # render axis
+            num_intervals = grid[1] - 1
+            y = offset + (axis_height / num_intervals) * cut_no
             pg.draw.line(self.surface, self.border_color, (offset-cut_len, y), (offset, y), 1)
-
-
-        # find min/max data values
-        min_val = data[0][1]
-        max_val = data[0][1]
-        for ts, val in data:
-            min_val = min(min_val, val)
-            max_val = max(max_val, val)
-        y_hi = max_val * 1.2
-        y_lo = min_val * 1.2
-
-        # x-labels
-        # y-labels
+            # render labels
+            v = y_hi - (cut_no * (y_hi - y_lo) / num_intervals)
+            label = f'{v:.1f}'
+            fnt_surface = self._font_mono.render(label, True, self.border_color)
+            fnt_hheight = fnt_surface.get_height() // 2
+            fnt_width = fnt_surface.get_width()
+            self.surface.blit(fnt_surface, (offset - 10 - fnt_width, y - fnt_hheight))
 
         # data
         loopback_ms = int(self.lookback_time * 1000)

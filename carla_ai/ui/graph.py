@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Optional
 from collections import deque
 import time
 import pygame as pg
@@ -7,7 +7,14 @@ from ..draw import round_rect
 from ..ui import font
 
 class Graph(object):
-    def __init__(self, title: str, pos: Tuple[int, int], size: Tuple[int, int], lookback_time: float):
+    def __init__(self,
+            title: str,
+            pos: Tuple[int, int],
+            size: Tuple[int, int],
+            lookback_time: float,
+            xlabel: Optional[str] = None,
+            ylabel: Optional[str] = None
+        ):
         """
         @param: lookback_time: max time in sec that will be displayed on the x-axis
         """
@@ -15,12 +22,15 @@ class Graph(object):
         self.pos = pos
         self.size = size
         self.lookback_time = lookback_time
+        self.xlabel = xlabel
+        self.ylabel = ylabel
         self.surface = pg.Surface(size)
         self.border_color = (200, 200, 200)
         self.inner_color = (30, 30, 30)
         self.radius = 6
         self.border = 1
         self._font_title = font.make_mono_font(20)
+        self._font_label = font.make_mono_font(13)
         self._font_mono = font.make_mono_font(13)
 
     def render(self, display, data: deque):
@@ -49,6 +59,13 @@ class Graph(object):
         title_x = self.size[0] // 2 - title_surface.get_width() // 2
         title_y = 8
         self.surface.blit(title_surface, (title_x, title_y))
+
+        # x-label
+        if self.xlabel:
+            fnt_surface = self._font_label.render(self.xlabel, True, self.border_color)
+            xlabel_x = self.size[0] // 2 - fnt_surface.get_width() // 2
+            xlabel_y = self.size[1] - fnt_surface.get_height() - 8
+            self.surface.blit(fnt_surface, (xlabel_x, xlabel_y))
 
         # find min/max data values
         min_val = data[0][1]

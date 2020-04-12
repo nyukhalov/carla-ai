@@ -95,7 +95,6 @@ class Simulation(object):
         self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
 
 
-
 class HUD(object):
     def __init__(self, display_size: Tuple[int, int], sim: Simulation):
         self.display_size = display_size

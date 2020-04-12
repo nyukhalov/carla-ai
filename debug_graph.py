@@ -16,6 +16,7 @@ if __name__=='__main__':
     g.set_title('Title')
     g.set_xlabel('Time (sec)')
     g.set_ylabel('meters')
+    g.set_ylim((-30, 30))
 
     clock = pg.time.Clock()
     offset = 0

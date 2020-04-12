@@ -13,7 +13,9 @@ class Graph(object):
             lookback_time: float,
             title: Optional[str] = None,
             xlabel: Optional[str] = None,
-            ylabel: Optional[str] = None
+            ylabel: Optional[str] = None,
+            xlim: Optional[Tuple[int, int]] = None,
+            ylim: Optional[Tuple[int, int]] = None,
         ):
         """
         @param: lookback_time: max time in sec that will be displayed on the x-axis
@@ -24,6 +26,8 @@ class Graph(object):
         self.lookback_time = lookback_time
         self.xlabel = xlabel
         self.ylabel = ylabel
+        self.xlim = xlim
+        self.ylim = ylim
         self.surface = pg.Surface(size)
         self.border_color = (200, 200, 200)
         self.inner_color = (30, 30, 30)
@@ -41,6 +45,26 @@ class Graph(object):
 
     def set_title(self, title: str):
         self.title = title
+
+    def set_xlim(self, xlim: Tuple[int, int]):
+        self.xlim = xlim
+
+    def set_ylim(self, ylim: Tuple[int, int]):
+        self.ylim = ylim
+
+    def _get_ylim(self, data) -> Tuple[int, int]:
+        if self.ylim:
+            return self.ylim
+        # else find min/max data values
+        min_val = data[0][1]
+        max_val = data[0][1]
+        for ts, val in data:
+            min_val = min(min_val, val)
+            max_val = max(max_val, val)
+        y_hi = max_val * 1.2
+        y_lo = min_val * 1.2
+        return (y_lo, y_hi)
+
 
     def render(self, display, data: deque):
         """
@@ -85,14 +109,7 @@ class Graph(object):
             ylabel_y = self.size[1] // 2 - fnt_surface.get_height() // 2
             self.surface.blit(fnt_surface, (ylabel_x, ylabel_y))
 
-        # find min/max data values
-        min_val = data[0][1]
-        max_val = data[0][1]
-        for ts, val in data:
-            min_val = min(min_val, val)
-            max_val = max(max_val, val)
-        y_hi = max_val * 1.2
-        y_lo = min_val * 1.2
+        y_lo, y_hi = self._get_ylim(data)
 
         # axis
         grid = (7, 5)

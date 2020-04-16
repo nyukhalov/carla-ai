@@ -10,6 +10,7 @@ class Graph(object):
     def __init__(self,
             pos: Tuple[int, int],
             size: Tuple[int, int],
+            grid: Tuple[int, int],
             lookback_time: float,
             title: Optional[str] = None,
             xlabel: Optional[str] = None,
@@ -23,6 +24,7 @@ class Graph(object):
         self.title = title
         self.pos = pos
         self.size = size
+        self.grid = grid
         self.lookback_time = lookback_time
         self.xlabel = xlabel
         self.ylabel = ylabel
@@ -111,8 +113,7 @@ class Graph(object):
 
         y_lo, y_hi = self._get_ylim(data)
 
-        # axis
-        grid = (7, 5)
+        # axes
         left_offset = 70
         right_offset = 20
         top_offset = 40
@@ -131,13 +132,13 @@ class Graph(object):
             (left_offset + axis_width, axis_y),
             1
         )
-        for cut_no in range(grid[0]):
+        for cut_no in range(self.grid[0]):
             # render axis
-            num_intervals = grid[0] - 1
+            num_intervals = self.grid[0] - 1
             x = left_offset + (axis_width / num_intervals) * cut_no
             pg.draw.line(self.surface, self.border_color, (x, axis_y), (x, axis_y + cut_len), 1)
             # render labels
-            t = (-self.lookback_time / num_intervals) * (grid[0] - cut_no - 1)
+            t = (-self.lookback_time / num_intervals) * (self.grid[0] - cut_no - 1)
             label = f'{t:.1f}'
             fnt_surface = self._font_mono.render(label, True, self.border_color)
             fnt_hwidth = fnt_surface.get_width() // 2
@@ -145,9 +146,9 @@ class Graph(object):
 
         # y-axis
         pg.draw.line(self.surface, self.border_color, (left_offset, top_offset), (left_offset, axis_y), 1)
-        for cut_no in range(grid[1]):
+        for cut_no in range(self.grid[1]):
             # render axis
-            num_intervals = grid[1] - 1
+            num_intervals = self.grid[1] - 1
             y = top_offset + (axis_height / num_intervals) * cut_no
             pg.draw.line(self.surface, self.border_color, (left_offset-cut_len, y), (left_offset, y), 1)
             # render labels

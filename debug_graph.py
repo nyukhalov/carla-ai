@@ -12,7 +12,10 @@ if __name__=='__main__':
     H=720
     display = pg.display.set_mode((W,H), pg.HWSURFACE | pg.DOUBLEBUF)
 
-    g = Graph((100, 100), (400, 300), 10.0)
+    pos = (100, 100)
+    size = (400, 300)
+    grid = (7, 5)
+    g = Graph(pos, size, grid, 10.0)
     g.set_title('Title')
     g.set_xlabel('Time (sec)')
     g.set_ylabel('meters')

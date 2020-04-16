@@ -14,12 +14,13 @@ if __name__=='__main__':
 
     pos = (100, 100)
     size = (400, 300)
-    grid = (7, 5)
+    grid = (5, 5)
     g = Graph(pos, size, grid, 10.0)
     g.set_title('Title')
     g.set_xlabel('Time (sec)')
     g.set_ylabel('meters')
-    g.set_ylim((-30, 30))
+    #g.set_xlim((-30, 30))
+    #g.set_ylim((-30, 30))
 
     clock = pg.time.Clock()
     offset = 0
@@ -28,11 +29,14 @@ if __name__=='__main__':
 
         offset -= 0.02
         now = time.time_ns() // 1000000
-        q = deque()
+        x = []
+        y1 = []
+        y2 = []
         for i in range(55):
-            q.append((now - (i*200), 20*math.sin(offset+i/5)))
-        q.reverse()
+            x.append(now - (i*200))
+            y1.append(math.sin(offset+i/5))
+            y2.append(math.cos(offset+i/5))
 
-        g.render(display, q)
+        g.render(display, x, y1, pg.Color(150,0,0), y2, pg.Color(0,0,150))
         pg.display.flip()
 

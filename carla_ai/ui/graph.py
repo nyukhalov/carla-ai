@@ -54,30 +54,42 @@ class Graph(object):
     def set_ylim(self, ylim: Tuple[int, int]):
         self.ylim = ylim
 
-    def _get_ylim(self, data) -> Tuple[int, int]:
+    def _get_xlim(self, xs) -> Tuple[int, int]:
+        if self.xlim:
+            return self.xlim
+        return (np.amin(xs), np.amax(xs))
+
+    def _get_ylim(self, yys) -> Tuple[int, int]:
         if self.ylim:
             return self.ylim
         # else find min/max data values
-        min_val = data[0][1]
-        max_val = data[0][1]
-        for ts, val in data:
-            min_val = min(min_val, val)
-            max_val = max(max_val, val)
-        y_hi = max_val * 1.2
-        y_lo = min_val * 1.2
-        return (y_lo, y_hi)
+        min_val = float('inf')
+        max_val = -float('inf')
+        for ys in yys:
+            for y in ys:
+                min_val = min(min_val, y)
+                max_val = max(max_val, y)
+
+        offset = (max_val - min_val) * 0.1
+        y_hi = max_val
+        y_lo = min_val
+        return (y_lo - offset, y_hi + offset)
 
 
-    def render(self, display, data: deque):
+    def render(self, display, *data):
         """
         Render the provided timestamped data on the given display
         @param: display: a display the data will be rendered on
-        @param: data: a deque containing timestamped data to display.
-                      the deque's item is a tuple of a timestamp (ms) and the value.
+        @param: data: a sequence of xs, ys1, color1, [ys2, color2]
         """
 
         if len(data) < 2:
             return
+
+        data = np.asarray(data)
+        xs = data[0]
+        yss = data[1::2]
+        colors = data[2::2]
 
         # background w/ border
         round_rect(
@@ -111,7 +123,8 @@ class Graph(object):
             ylabel_y = self.size[1] // 2 - fnt_surface.get_height() // 2
             self.surface.blit(fnt_surface, (ylabel_x, ylabel_y))
 
-        y_lo, y_hi = self._get_ylim(data)
+        x_lo, x_hi = self._get_xlim(xs)
+        y_lo, y_hi = self._get_ylim(yss)
 
         # axes
         left_offset = 70
@@ -133,13 +146,13 @@ class Graph(object):
             1
         )
         for cut_no in range(self.grid[0]):
-            # render axis
+            # render axis cuts
             num_intervals = self.grid[0] - 1
             x = left_offset + (axis_width / num_intervals) * cut_no
             pg.draw.line(self.surface, self.border_color, (x, axis_y), (x, axis_y + cut_len), 1)
             # render labels
-            t = (-self.lookback_time / num_intervals) * (self.grid[0] - cut_no - 1)
-            label = f'{t:.1f}'
+            v = cut_no * (x_hi - x_lo) / num_intervals
+            label = f'{v:.1f}'
             fnt_surface = self._font_mono.render(label, True, self.border_color)
             fnt_hwidth = fnt_surface.get_width() // 2
             self.surface.blit(fnt_surface, (x - fnt_hwidth, axis_y + 10))
@@ -147,7 +160,7 @@ class Graph(object):
         # y-axis
         pg.draw.line(self.surface, self.border_color, (left_offset, top_offset), (left_offset, axis_y), 1)
         for cut_no in range(self.grid[1]):
-            # render axis
+            # render axis cuts
             num_intervals = self.grid[1] - 1
             y = top_offset + (axis_height / num_intervals) * cut_no
             pg.draw.line(self.surface, self.border_color, (left_offset-cut_len, y), (left_offset, y), 1)
@@ -160,27 +173,18 @@ class Graph(object):
             self.surface.blit(fnt_surface, (left_offset - 10 - fnt_width, y - fnt_hheight))
 
         # data
-        loopback_ms = int(self.lookback_time * 1000)
 
-        h_res =  loopback_ms / axis_width # horizontal resolution
+        h_res = abs(x_hi - x_lo) / axis_width # horizontal resolution
         v_res = abs(y_hi - y_lo) / axis_height # vertical resolution
 
-        now_ms = time.time_ns() // 1000000 # ms
-        last_ts = now_ms - loopback_ms # ms
+        for ys, color in zip(yss, colors):
+            for x1_val, x2_val, y1_val, y2_val in zip(xs[:-1], xs[1:], ys[:-1], ys[1:]):
+                x1 = left_offset + int((x1_val - x_lo) / h_res)
+                x2 = left_offset + int((x2_val - x_lo) / h_res)
+                y1 = top_offset + axis_height - int((y1_val - y_lo) / v_res)
+                y2 = top_offset + axis_height - int((y2_val - y_lo) / v_res)
 
-        r_data = list(reversed(data))
-        for (ts1, val1), (ts2, val2) in zip(r_data[:-1], r_data[1:]):
-            if ts1 > now_ms or ts2 > now_ms:
-                continue
-            if ts1 < last_ts or ts2 < last_ts:
-                break
-
-            x1 = left_offset + int((ts1 - last_ts) / h_res)
-            x2 = left_offset + int((ts2 - last_ts) / h_res)
-            y1 = top_offset + axis_height - int((val1 - y_lo) / v_res)
-            y2 = top_offset + axis_height - int((val2 - y_lo) / v_res)
-
-            pg.draw.line(self.surface, (0,255,0), (x1,y1), (x2,y2), 1)
+                pg.draw.line(self.surface, color, (x1,y1), (x2,y2), 2)
 
         # update display
         display.blit(self.surface, self.pos)

@@ -11,12 +11,12 @@ class Graph(object):
             pos: Tuple[int, int],
             size: Tuple[int, int],
             grid: Tuple[int, int],
-            lookback_time: float,
             title: Optional[str] = None,
             xlabel: Optional[str] = None,
             ylabel: Optional[str] = None,
             xlim: Optional[Tuple[int, int]] = None,
             ylim: Optional[Tuple[int, int]] = None,
+            line_size: Optional[int] = None
         ):
         """
         @param: lookback_time: max time in sec that will be displayed on the x-axis
@@ -25,11 +25,11 @@ class Graph(object):
         self.pos = pos
         self.size = size
         self.grid = grid
-        self.lookback_time = lookback_time
         self.xlabel = xlabel
         self.ylabel = ylabel
         self.xlim = xlim
         self.ylim = ylim
+        self.line_size = line_size
         self.surface = pg.Surface(size)
         self.border_color = (200, 200, 200)
         self.inner_color = (30, 30, 30)
@@ -54,6 +54,9 @@ class Graph(object):
     def set_ylim(self, ylim: Tuple[int, int]):
         self.ylim = ylim
 
+    def set_line_size(self, line_size: int):
+        self.line_size = line_size
+
     def _get_xlim(self, xs) -> Tuple[int, int]:
         if self.xlim:
             return self.xlim
@@ -70,7 +73,8 @@ class Graph(object):
                 min_val = min(min_val, y)
                 max_val = max(max_val, y)
 
-        offset = (max_val - min_val) * 0.1
+        diff = max_val - min_val
+        offset = diff * 0.1 if diff == 0 else 0.1
         y_hi = max_val
         y_lo = min_val
         return (y_lo - offset, y_hi + offset)
@@ -151,7 +155,7 @@ class Graph(object):
             x = left_offset + (axis_width / num_intervals) * cut_no
             pg.draw.line(self.surface, self.border_color, (x, axis_y), (x, axis_y + cut_len), 1)
             # render labels
-            v = cut_no * (x_hi - x_lo) / num_intervals
+            v = x_lo + cut_no * (x_hi - x_lo) / num_intervals
             label = f'{v:.1f}'
             fnt_surface = self._font_mono.render(label, True, self.border_color)
             fnt_hwidth = fnt_surface.get_width() // 2
@@ -184,7 +188,7 @@ class Graph(object):
                 y1 = top_offset + axis_height - int((y1_val - y_lo) / v_res)
                 y2 = top_offset + axis_height - int((y2_val - y_lo) / v_res)
 
-                pg.draw.line(self.surface, color, (x1,y1), (x2,y2), 2)
+                pg.draw.line(self.surface, color, (x1,y1), (x2,y2), self.line_size or 2)
 
         # update display
         display.blit(self.surface, self.pos)

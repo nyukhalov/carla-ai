@@ -1,14 +1,17 @@
 import traceback
+import math
 import collections
 import random
+import time
 from typing import Tuple
 import weakref
 import time
 import carla
 from carla import ColorConverter as cc
-import pygame
+import pygame as pg
 import numpy as np
-from carla_ai.ui import font
+from carla_ai.ui import font, Graph
+from carla_ai.measurement import Measurement
 
 def draw_bbox(debug, obj):
     bbox_location = obj.get_transform().location + obj.bounding_box.location
@@ -68,7 +71,7 @@ class Simulation(object):
         weak_self = weakref.ref(self)
         self.sensor.listen(lambda image: Simulation.parse_image(weak_self, image))
 
-    def tick(self, clock: pygame.time.Clock):
+    def tick(self, clock: pg.time.Clock):
         pass
 
     def render(self, display):
@@ -93,7 +96,7 @@ class Simulation(object):
         array = np.reshape(array, (image.height, image.width, 4))
         array = array[:, :, :3]
         array = array[:, :, ::-1]
-        self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
+        self.surface = pg.surfarray.make_surface(array.swapaxes(0, 1))
 
 
 class HUD(object):
@@ -106,33 +109,51 @@ class HUD(object):
         self.map = self.world.get_map()
 
         self.text = None
-        self._server_clock = pygame.time.Clock()
+        self._server_clock = pg.time.Clock()
 
         self.world.on_tick(self.on_world_tick)
 
-        self.background_surface = pygame.Surface((220, self.display_size[1]))
+        panel_width = 300
+        self.background_surface = pg.Surface((panel_width, self.display_size[1]))
         self.background_surface.set_alpha(100)
 
         # initializing fonts
         self._font_mono = font.make_mono_font(14)
 
         # init history circular buffers
-        self.history_acc = collections.deque(maxlen=200)
-        self.history_vel = collections.deque(maxlen=200)
+        self._history_time = 10 # seconds
+        self._history_samples_per_sec = 10
+        self.measurement_history = collections.deque(maxlen=self._history_time * self._history_samples_per_sec)
+
+        # init speed graph
+        speed_graph_size = (300, 200)
+        speed_graph_pos_y = self.display_size[1] - speed_graph_size[1]
+        self.speed_graph = Graph((0, speed_graph_pos_y), speed_graph_size, (6, 5))
+        self.speed_graph.set_title('Speed')
+        self.speed_graph.set_xlabel('Time (sec)')
+        self.speed_graph.set_ylabel('km/h')
+        self.speed_graph.set_xlim((-10, 0))
+        self.speed_graph.set_ylim((0, 40))
+        self.speed_graph.set_line_size(1)
 
     def on_world_tick(self, timestamp):
         self._server_clock.tick()
 
-    def tick(self, clock: pygame.time.Clock):
-        max_len = 17
+    def tick(self, clock: pg.time.Clock):
+        max_len = 18
         ego_transform = self.sim.ego_car.get_transform()
         ego_location = ego_transform.location
         ego_heading = ego_transform.rotation.yaw
         ego_vel = self.sim.ego_car.get_velocity()
         ego_acc = self.sim.ego_car.get_acceleration()
 
-        self.history_acc.append(ego_acc)
-        self.history_vel.append(ego_vel)
+        speed = 3.6 * math.sqrt(ego_vel.x**2 + ego_vel.y**2)
+
+        timestamp = self._timestamp_now_ms()
+        threshold = (1000 / self._history_samples_per_sec)
+        if not self.measurement_history or self.measurement_history[-1].timestamp < timestamp - threshold:
+            m = Measurement(timestamp, speed)
+            self.measurement_history.append(m)
 
         self.text = [
             'Simulation',
@@ -141,10 +162,11 @@ class HUD(object):
             f'Map:  {self.map.name}',
             '',
             'Vehicle State',
-            self._format_text_item(f'vx: {ego_vel.x:.3f}', 'm/s', max_len),
-            self._format_text_item(f'vy: {ego_vel.y:.3f}', 'm/s', max_len),
-            self._format_text_item(f'ax: {ego_acc.x:.3f}', 'm/s2', max_len),
-            self._format_text_item(f'ay: {ego_acc.y:.3f}', 'm/s2', max_len),
+            self._format_text_item(f'speed: {speed:.3f}', 'km/h', max_len),
+            self._format_text_item(f'vx:    {ego_vel.x:.3f}', 'm/s', max_len),
+            self._format_text_item(f'vy:    {ego_vel.y:.3f}', 'm/s', max_len),
+            self._format_text_item(f'ax:    {ego_acc.x:.3f}', 'm/s2', max_len),
+            self._format_text_item(f'ay:    {ego_acc.y:.3f}', 'm/s2', max_len),
             '',
             'Localization:',
             self._format_text_item(f'x:   {ego_location.x:.3f}', 'm', max_len),
@@ -152,6 +174,9 @@ class HUD(object):
             self._format_text_item(f'yaw: {ego_heading:.3f}', 'deg', max_len),
             ''
         ]
+
+    def _timestamp_now_ms(self):
+        return time.time_ns() / 1000000
 
     def _format_text_item(self, text: str, r_suffix: str, max_len: int):
         to_fill = max_len - len(text) - len(r_suffix)
@@ -169,27 +194,17 @@ class HUD(object):
             display.blit(surface, (8, v_offset))
             v_offset += 18
 
-        surface = self._font_mono.render('XY Velocity', True, (255,255,255))
-        display.blit(surface, (8, v_offset))
-
-        v_offset += 36
-        vel_x_points = [(x + 8, vel.x + v_offset) for x, vel in enumerate(self.history_vel)]
-        vel_y_points = [(x + 8, vel.y + v_offset) for x, vel in enumerate(self.history_vel)]
-        if len(vel_x_points) > 1:
-            pygame.draw.lines(display, (255, 136, 0), False, vel_x_points, 1)
-            pygame.draw.lines(display, (136, 255, 0), False, vel_y_points, 1)
-            v_offset += 18
-
-        surface = self._font_mono.render('XY Acceleration', True, (255,255,255))
-        display.blit(surface, (8, v_offset))
-
-        v_offset += 36
-        acc_x_points = [(x + 8, acc.x + v_offset) for x, acc in enumerate(self.history_acc)]
-        acc_y_points = [(x + 8, acc.y + v_offset) for x, acc in enumerate(self.history_acc)]
-        if len(acc_x_points) > 1:
-            pygame.draw.lines(display, (255, 136, 0), False, acc_x_points, 1)
-            pygame.draw.lines(display, (136, 255, 0), False, acc_y_points, 1)
-            v_offset += 18
+        # speed graph
+        now = self._timestamp_now_ms()
+        xs = []
+        ys = []
+        for m in self.measurement_history:
+            t = (m.timestamp - now) / 1000 # seconds
+            if t < -10:
+                continue
+            xs.append(t)
+            ys.append(m.speed)
+        self.speed_graph.render(display, xs, ys, pg.Color(0,200,0))
 
 
 class Game(object):
@@ -200,7 +215,7 @@ class Game(object):
         self.simulation = Simulation(display_size, world)
         self.hud = HUD(display_size, self.simulation)
 
-    def tick(self, clock: pygame.time.Clock):
+    def tick(self, clock: pg.time.Clock):
         self.simulation.tick(clock)
         self.hud.tick(clock)
 
@@ -225,8 +240,8 @@ def main():
     W, H = [1280, 720]
     map_name = 'Town02'
 
-    pygame.init()
-    pygame.font.init()
+    pg.init()
+    pg.font.init()
 
     game = None
     try:
@@ -235,20 +250,20 @@ def main():
         client.load_world(map_name)
 
         game = Game(client.get_world(), (W,H))
-        clock = pygame.time.Clock()
-        display = pygame.display.set_mode((W,H), pygame.HWSURFACE | pygame.DOUBLEBUF)
+        clock = pg.time.Clock()
+        display = pg.display.set_mode((W,H), pg.HWSURFACE | pg.DOUBLEBUF)
         while True:
             clock.tick_busy_loop(60)
             game.tick(clock)
             game.render(display)
-            pygame.display.flip()
+            pg.display.flip()
     except Exception as e:
         print('Game loop has been interrupted by exception', e)
         traceback.print_exc()
     finally:
         if game is not None:
             game.destroy()
-        pygame.quit()
+        pg.quit()
 
 
 if __name__=='__main__':

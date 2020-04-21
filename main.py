@@ -10,6 +10,7 @@ import carla
 from carla import ColorConverter as cc
 import pygame as pg
 import numpy as np
+from carla_ai.av.planner import Planner
 from carla_ai.ui import font, Graph
 from carla_ai.measurement import Measurement
 from carla_ai.sim import Simulation
@@ -24,10 +25,12 @@ class Game(object):
 
         self.simulation = Simulation(display_size, world)
         self.hud = HUD(display_size, self.simulation)
-        self.debugger = Debugger(self.simulation)
+        self.planner = Planner(self.simulation)
+        self.debugger = Debugger(self.simulation, self.planner)
 
     def tick(self, clock: pg.time.Clock):
         self.simulation.tick(clock)
+        self.planner.plan()
         self.hud.tick(clock)
         self.debugger.tick(clock)
 

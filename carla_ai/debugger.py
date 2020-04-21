@@ -4,10 +4,12 @@ from typing import List
 import pygame as pg
 import carla
 from .sim import Simulation
+from .av.planner import Planner
 
 class Debugger(object):
-    def __init__(self, sim: Simulation):
+    def __init__(self, sim: Simulation, planner: Planner):
         self.sim = sim
+        self.planner = planner
         self.last_update_time = self._timestamp_now_ms()
 
     def tick(self, clock: pg.time.Clock):
@@ -17,19 +19,10 @@ class Debugger(object):
             color = carla.Color(0, 0, 200, 0)
             self.last_update_time = now
             # visualize a few nearest waypoints
-            wps = self._get_next_wps(20)
+            wps = self.planner.path or []
             for wp in wps:
                 self._draw_waypoint(wp, color, life_time=lifetime)
             #draw_bbox(self.debug, veh)
-
-    def _get_next_wps(self, num_waypoints: int) -> List[carla.Waypoint]:
-        within_distance = 2
-        nearest_wp = self.sim.map.get_waypoint(self.sim.ego_car.get_location(), lane_type=carla.LaneType.Driving)
-        wps = [nearest_wp]
-        while len(wps) < num_waypoints:
-            next_wp = wps[-1].next(within_distance)[-1]
-            wps.append(next_wp)
-        return wps
 
     def _timestamp_now_ms(self) -> int:
         return time.monotonic_ns() / 1000000

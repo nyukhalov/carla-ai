@@ -1,21 +1,13 @@
 import traceback
-import math
-import collections
-import random
-import time
 from typing import Tuple
-import weakref
-import time
+
 import carla
-from carla import ColorConverter as cc
 import pygame as pg
-import numpy as np
+
 from carla_ai.av.planner import Planner
-from carla_ai.ui import font, Graph
-from carla_ai.measurement import Measurement
-from carla_ai.sim import Simulation
-from carla_ai.hud import HUD
 from carla_ai.debugger import Debugger
+from carla_ai.hud import HUD
+from carla_ai.sim import Simulation
 
 
 class Game(object):
@@ -52,12 +44,12 @@ def main():
     game = None
     try:
         client = carla.Client('localhost', 2000)
-        client.set_timeout(5.0) # seconds
+        client.set_timeout(5.0)  # seconds
         client.load_world(map_name)
 
-        game = Game(client.get_world(), (W,H))
+        game = Game(client.get_world(), (W, H))
         clock = pg.time.Clock()
-        display = pg.display.set_mode((W,H), pg.HWSURFACE | pg.DOUBLEBUF)
+        display = pg.display.set_mode((W, H), pg.HWSURFACE | pg.DOUBLEBUF)
         while True:
             clock.tick_busy_loop(60)
             game.tick(clock)
@@ -72,5 +64,5 @@ def main():
         pg.quit()
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     main()

@@ -1,11 +1,14 @@
-from typing import Tuple
 import collections
-import time
 import math
-from carla_ai.ui import font, Graph
+import time
+from typing import Tuple
+
 import pygame as pg
-from .sim import Simulation
+
+from carla_ai.ui import font, Graph
 from .measurement import Measurement
+from .sim import Simulation
+
 
 class HUD(object):
     def __init__(self, display_size: Tuple[int, int], sim: Simulation):

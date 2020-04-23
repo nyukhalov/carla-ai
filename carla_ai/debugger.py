@@ -1,10 +1,11 @@
 import time
-import random
-from typing import List
-import pygame as pg
+
 import carla
-from .sim import Simulation
+import pygame as pg
+
 from .av.planner import Planner
+from .sim import Simulation
+
 
 class Debugger(object):
     def __init__(self, sim: Simulation, planner: Planner):

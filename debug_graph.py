@@ -1,16 +1,17 @@
-import time
 import math
-from collections import deque
+import time
+
 import pygame as pg
+
 from carla_ai.ui import Graph
 
-if __name__=='__main__':
+if __name__ == '__main__':
     pg.init()
     pg.font.init()
 
-    W=1280
-    H=720
-    display = pg.display.set_mode((W,H), pg.HWSURFACE | pg.DOUBLEBUF)
+    W = 1280
+    H = 720
+    display = pg.display.set_mode((W, H), pg.HWSURFACE | pg.DOUBLEBUF)
 
     pos = (100, 100)
     size = (400, 300)
@@ -19,8 +20,8 @@ if __name__=='__main__':
     g.set_title('Title')
     g.set_xlabel('Time (sec)')
     g.set_ylabel('meters')
-    #g.set_xlim((-30, 30))
-    #g.set_ylim((-30, 30))
+    # g.set_xlim((-30, 30))
+    # g.set_ylim((-30, 30))
 
     clock = pg.time.Clock()
     offset = 0
@@ -33,10 +34,9 @@ if __name__=='__main__':
         y1 = []
         y2 = []
         for i in range(55):
-            x.append(now - (i*200))
-            y1.append(math.sin(offset+i/5))
-            y2.append(math.cos(offset+i/5))
+            x.append(now - (i * 200))
+            y1.append(math.sin(offset + i / 5))
+            y2.append(math.cos(offset + i / 5))
 
-        g.render(display, x, y1, pg.Color(150,0,0), y2, pg.Color(0,0,150))
+        g.render(display, x, y1, pg.Color(150, 0, 0), y2, pg.Color(0, 0, 150))
         pg.display.flip()
-

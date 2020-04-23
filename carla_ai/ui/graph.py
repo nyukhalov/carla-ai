@@ -1,10 +1,11 @@
 from typing import Tuple, Optional
-from collections import deque
-import time
-import pygame as pg
+
 import numpy as np
+import pygame as pg
+
 from ..draw import round_rect
 from ..ui import font
+
 
 class Graph(object):
     def __init__(self,

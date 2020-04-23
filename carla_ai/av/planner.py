@@ -1,11 +1,14 @@
 from typing import List
+
 import carla
+
 from ..sim import Simulation
+
 
 class Planner(object):
     def __init__(self, sim: Simulation):
         self.sim = sim
-        self.path: List[carla.Waypoint] = None
+        self.path: List[carla.Waypoint] = []
         self.num_waypoints = 20
 
     def plan(self) -> None:

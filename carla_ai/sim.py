@@ -1,10 +1,12 @@
-from typing import Tuple
-import weakref
 import random
-import numpy as np
-from carla import ColorConverter as cc
+import weakref
+from typing import Tuple
+
 import carla
+import numpy as np
 import pygame as pg
+from carla import ColorConverter as cc
+
 
 class Simulation(object):
     def __init__(self, display_size: Tuple[int, int], world: carla.World):
@@ -38,7 +40,7 @@ class Simulation(object):
 
     def render(self, display):
         if self.surface is not None:
-            display.blit(self.surface, (0,0))
+            display.blit(self.surface, (0, 0))
 
     def destroy(self):
         actors = [

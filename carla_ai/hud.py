@@ -54,9 +54,9 @@ class HUD(object):
         cte_graph_size = (300, 200)
         cte_graph_pos_y = self.display_size[1] - cte_graph_size[1] - speed_graph_size[1]
         self.cte_graph = Graph((0, cte_graph_pos_y), cte_graph_size, (6, 5))
-        self.cte_graph.set_title('Cross-track error')
+        self.cte_graph.set_title('CTE & SPD Error')
         self.cte_graph.set_xlabel('Time (sec)')
-        self.cte_graph.set_ylabel('meters')
+        self.cte_graph.set_ylabel('meters / km/h')
         self.cte_graph.set_xlim((-10, 0))
         #self.cte_graph.set_ylim((0, 5))
         self.cte_graph.set_line_size(1)
@@ -65,7 +65,7 @@ class HUD(object):
         self._server_clock.tick()
 
     def tick(self, clock: pg.time.Clock):
-        max_len = 18
+        max_len = 20
         ego_transform = self.sim.ego_car.get_transform()
         ego_location = ego_transform.location
         ego_heading = ego_transform.rotation.yaw
@@ -73,13 +73,15 @@ class HUD(object):
         ego_acc = self.sim.ego_car.get_acceleration()
 
         speed = 3.6 * math.sqrt(ego_vel.x ** 2 + ego_vel.y ** 2)
+        target_speed = self._get_target_speed()
+        speed_err = abs(target_speed - speed)
 
         cte = self._calc_lateral_error()  # cross-track error
 
         timestamp = self._timestamp_now_ms()
         threshold = (1000 / self._history_samples_per_sec)
         if not self.measurement_history or self.measurement_history[-1].timestamp < timestamp - threshold:
-            m = Measurement(timestamp, speed, cte)
+            m = Measurement(timestamp, speed, target_speed, cte, speed_err)
             self.measurement_history.append(m)
 
         self.text = [
@@ -89,12 +91,10 @@ class HUD(object):
             f'Map:  {self.map.name}',
             '',
             'Vehicle State',
-            self._format_text_item(f'speed: {speed:.3f}', 'km/h', max_len),
-            self._format_text_item(f'vx:    {ego_vel.x:.3f}', 'm/s', max_len),
-            self._format_text_item(f'vy:    {ego_vel.y:.3f}', 'm/s', max_len),
-            self._format_text_item(f'ax:    {ego_acc.x:.3f}', 'm/s2', max_len),
-            self._format_text_item(f'ay:    {ego_acc.y:.3f}', 'm/s2', max_len),
-            self._format_text_item(f'cte:    {cte:.3f}', 'm', max_len),
+            self._format_text_item(f'cur_spd: {speed:.3f}', 'km/h', max_len)        + '  ' + self._format_text_item(f'vx: {ego_vel.x:.3f}', 'm/s', max_len),
+            self._format_text_item(f'tar_spd: {target_speed:.3f}', 'km/h', max_len) + '  ' + self._format_text_item(f'vy: {ego_vel.y:.3f}', 'm/s', max_len),
+            self._format_text_item(f'spd_err: {speed_err:.3f}', 'km/h', max_len)    + '  ' + self._format_text_item(f'ax: {ego_acc.x:.3f}', 'm/s2', max_len),
+            self._format_text_item(f'cte:     {cte:.3f}', 'm', max_len)             + '  ' + self._format_text_item(f'ay: {ego_acc.y:.3f}', 'm/s2', max_len),
             '',
             'Localization:',
             self._format_text_item(f'x:   {ego_location.x:.3f}', 'm', max_len),
@@ -102,6 +102,17 @@ class HUD(object):
             self._format_text_item(f'yaw: {ego_heading:.3f}', 'deg', max_len),
             ''
         ]
+
+    def _get_target_speed(self) -> float:
+        cur_pose = self.sim.ego_car.get_transform().location
+        closest_node = None
+        min_distance = float('inf')
+        for node in self.planner.path:
+            dist = node.waypoint.transform.location.distance(cur_pose)
+            if dist < min_distance:
+                min_distance = dist
+                closest_node = node
+        return closest_node.speed_limit if closest_node is not None else 0
 
     def _calc_lateral_error(self) -> float:
         cur_pose = self.sim.ego_car.get_transform().location
@@ -134,13 +145,17 @@ class HUD(object):
         now = self._timestamp_now_ms()
         xs = []
         speed_hist = []
+        target_speed_hist = []
         cte_hist = []
+        speed_err_hist = []
         for m in self.measurement_history:
             t = (m.timestamp - now) / 1000  # seconds
             if t < -10:
                 continue
             xs.append(t)
             speed_hist.append(m.speed)
+            target_speed_hist.append(m.target_speed)
             cte_hist.append(m.lateral_error)
-        self.speed_graph.render(display, xs, speed_hist, pg.Color(0, 200, 0))
-        self.cte_graph.render(display, xs, cte_hist, pg.Color(0, 200, 0))
+            speed_err_hist.append(m.speed_error)
+        self.speed_graph.render(display, xs, speed_hist, pg.Color(0, 200, 0), target_speed_hist, pg.Color(200, 0, 0))
+        self.cte_graph.render(display, xs, cte_hist, pg.Color(0, 200, 0), speed_err_hist, pg.Color(200, 0, 0))

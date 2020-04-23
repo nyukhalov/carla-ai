@@ -20,22 +20,22 @@ class Debugger(object):
             color = carla.Color(0, 0, 200, 0)
             self.last_update_time = now
             # visualize a few nearest waypoints
-            wps = self.planner.path or []
-            for wp in wps:
-                self._draw_waypoint(wp, color, life_time=lifetime)
-            #draw_bbox(self.debug, veh)
+            path = self.planner.path or []
+            for node in path:
+                self._draw_waypoint(node.waypoint, color, life_time=lifetime)
+            # draw_bbox(self.debug, veh)
 
     def _timestamp_now_ms(self) -> int:
-        return time.monotonic_ns() / 1000000
+        return time.monotonic_ns() // 1000000
 
     def _draw_bbox(self, obj):
         bbox_location = obj.get_transform().location + obj.bounding_box.location
         self.sim.world.debug.draw_box(
             carla.BoundingBox(bbox_location, obj.bounding_box.extent),
             obj.get_transform().rotation,
-            0.05, # thickness
+            0.05,  # thickness
             carla.Color(255, 0, 0, 0),
-            5 # lifetime [sec]
+            5  # lifetime [sec]
         )
 
     def _draw_waypoint(self, wp: carla.Waypoint, color: carla.Color, life_time: float = 0):

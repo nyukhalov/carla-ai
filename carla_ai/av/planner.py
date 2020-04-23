@@ -2,26 +2,32 @@ from typing import List
 
 import carla
 
-from ..sim import Simulation
+from carla_ai.sim import Simulation
+from carla_ai.av.model import WaypointWithSpeedLimit
 
 
 class Planner(object):
     def __init__(self, sim: Simulation):
         self.sim = sim
-        self.path: List[carla.Waypoint] = []
+        self.path: List[WaypointWithSpeedLimit] = []
         self.num_waypoints = 20
+        self.speed_limit = 20  # 20 km/h
 
     def plan(self) -> None:
         if not self.path:
-            self.path = [self.sim.map.get_waypoint(self.sim.ego_car.get_location(), lane_type=carla.LaneType.Driving)]
+            closest_wp = self.sim.map.get_waypoint(self.sim.ego_car.get_location(), lane_type=carla.LaneType.Driving)
+            self.path = [self._make_wp_with_speed_limit(closest_wp)]
         self._update_path()
+
+    def _make_wp_with_speed_limit(self, wp: carla.Waypoint) -> WaypointWithSpeedLimit:
+        return WaypointWithSpeedLimit(wp, self.speed_limit)
 
     def _update_path(self) -> None:
         cur_location = self.sim.ego_car.get_location()
         closest_wp_idx = None
         closest_distance = float('inf')
-        for idx, wp in enumerate(self.path):
-            dist = wp.transform.location.distance(cur_location)
+        for idx, node in enumerate(self.path):
+            dist = node.waypoint.transform.location.distance(cur_location)
             if dist < closest_distance:
                 closest_distance = dist
                 closest_wp_idx = idx
@@ -37,5 +43,5 @@ class Planner(object):
         # add waypoints ahead the car
         within_distance = 2
         while len(self.path) < self.num_waypoints:
-            next_wp = self.path[-1].next(within_distance)[-1]
-            self.path.append(next_wp)
+            next_wp = self.path[-1].waypoint.next(within_distance)[-1]
+            self.path.append(self._make_wp_with_speed_limit(next_wp))

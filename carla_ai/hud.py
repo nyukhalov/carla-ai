@@ -106,7 +106,7 @@ class HUD(object):
     def _calc_lateral_error(self) -> float:
         cur_pose = self.sim.ego_car.get_transform().location
         cur_pose_p = Point(cur_pose.x, cur_pose.y)
-        path_ls = LineString([(wp.transform.location.x, wp.transform.location.y) for wp in self.planner.path])
+        path_ls = LineString([(wp.x, wp.y) for wp in self.planner.path])
         try:
             return path_ls.distance(cur_pose_p)
         except:

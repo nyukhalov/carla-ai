@@ -9,16 +9,16 @@ from ..ui import font
 
 class Graph(object):
     def __init__(self,
-            pos: Tuple[int, int],
-            size: Tuple[int, int],
-            grid: Tuple[int, int],
-            title: Optional[str] = None,
-            xlabel: Optional[str] = None,
-            ylabel: Optional[str] = None,
-            xlim: Optional[Tuple[int, int]] = None,
-            ylim: Optional[Tuple[int, int]] = None,
-            line_size: Optional[int] = None
-        ):
+                 pos: Tuple[int, int],
+                 size: Tuple[int, int],
+                 grid: Tuple[int, int],
+                 title: Optional[str] = None,
+                 xlabel: Optional[str] = None,
+                 ylabel: Optional[str] = None,
+                 xlim: Optional[Tuple[int, int]] = None,
+                 ylim: Optional[Tuple[int, int]] = None,
+                 line_size: Optional[int] = None
+                 ):
         """
         @param: lookback_time: max time in sec that will be displayed on the x-axis
         """
@@ -61,7 +61,7 @@ class Graph(object):
     def _get_xlim(self, xs) -> Tuple[int, int]:
         if self.xlim:
             return self.xlim
-        return (np.amin(xs), np.amax(xs))
+        return np.amin(xs), np.amax(xs)
 
     def _get_ylim(self, yys) -> Tuple[int, int]:
         if self.ylim:
@@ -75,11 +75,10 @@ class Graph(object):
                 max_val = max(max_val, y)
 
         diff = max_val - min_val
-        offset = diff * 0.1 if diff == 0 else 0.1
+        offset = diff * 0.1 if diff > 0.0001 else 0.1
         y_hi = max_val
         y_lo = min_val
-        return (y_lo - offset, y_hi + offset)
-
+        return y_lo - offset, y_hi + offset
 
     def render(self, display, *data):
         """
@@ -168,7 +167,7 @@ class Graph(object):
             # render axis cuts
             num_intervals = self.grid[1] - 1
             y = top_offset + (axis_height / num_intervals) * cut_no
-            pg.draw.line(self.surface, self.border_color, (left_offset-cut_len, y), (left_offset, y), 1)
+            pg.draw.line(self.surface, self.border_color, (left_offset - cut_len, y), (left_offset, y), 1)
             # render labels
             v = y_hi - (cut_no * (y_hi - y_lo) / num_intervals)
             label = f'{v:.1f}'
@@ -179,8 +178,8 @@ class Graph(object):
 
         # data
 
-        h_res = abs(x_hi - x_lo) / axis_width # horizontal resolution
-        v_res = abs(y_hi - y_lo) / axis_height # vertical resolution
+        h_res = abs(x_hi - x_lo) / axis_width  # horizontal resolution
+        v_res = abs(y_hi - y_lo) / axis_height  # vertical resolution
 
         for ys, color in zip(yss, colors):
             for x1_val, x2_val, y1_val, y2_val in zip(xs[:-1], xs[1:], ys[:-1], ys[1:]):
@@ -189,8 +188,7 @@ class Graph(object):
                 y1 = top_offset + axis_height - int((y1_val - y_lo) / v_res)
                 y2 = top_offset + axis_height - int((y2_val - y_lo) / v_res)
 
-                pg.draw.line(self.surface, color, (x1,y1), (x2,y2), self.line_size or 2)
+                pg.draw.line(self.surface, color, (x1, y1), (x2, y2), self.line_size or 2)
 
         # update display
         display.blit(self.surface, self.pos)
-

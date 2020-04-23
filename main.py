@@ -16,8 +16,8 @@ class Game(object):
         world.set_weather(carla.WeatherParameters.ClearNoon)
 
         self.simulation = Simulation(display_size, world)
-        self.hud = HUD(display_size, self.simulation)
         self.planner = Planner(self.simulation)
+        self.hud = HUD(display_size, self.simulation, self.planner)
         self.debugger = Debugger(self.simulation, self.planner)
 
     def tick(self, clock: pg.time.Clock):

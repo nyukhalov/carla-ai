@@ -4,16 +4,19 @@ import time
 from typing import Tuple
 
 import pygame as pg
+from shapely.geometry import Point, LineString
 
 from carla_ai.ui import font, Graph
-from .measurement import Measurement
-from .sim import Simulation
+from carla_ai.measurement import Measurement
+from carla_ai.sim import Simulation
+from carla_ai.av import Planner
 
 
 class HUD(object):
-    def __init__(self, display_size: Tuple[int, int], sim: Simulation):
+    def __init__(self, display_size: Tuple[int, int], sim: Simulation, planner: Planner):
         self.display_size = display_size
         self.sim = sim
+        self.planner = planner
         self.world = sim.world
 
         # cache the map, as calling the method inside the tick/render method significantly reduces FPS
@@ -32,7 +35,7 @@ class HUD(object):
         self._font_mono = font.make_mono_font(14)
 
         # init history circular buffers
-        self._history_time = 10 # seconds
+        self._history_time = 10  # seconds
         self._history_samples_per_sec = 10
         self.measurement_history = collections.deque(maxlen=self._history_time * self._history_samples_per_sec)
 
@@ -47,6 +50,17 @@ class HUD(object):
         self.speed_graph.set_ylim((0, 40))
         self.speed_graph.set_line_size(1)
 
+        # init CTE graph (lateral error)
+        cte_graph_size = (300, 200)
+        cte_graph_pos_y = self.display_size[1] - cte_graph_size[1] - speed_graph_size[1]
+        self.cte_graph = Graph((0, cte_graph_pos_y), cte_graph_size, (6, 5))
+        self.cte_graph.set_title('Cross-track error')
+        self.cte_graph.set_xlabel('Time (sec)')
+        self.cte_graph.set_ylabel('meters')
+        self.cte_graph.set_xlim((-10, 0))
+        #self.cte_graph.set_ylim((0, 5))
+        self.cte_graph.set_line_size(1)
+
     def on_world_tick(self, timestamp):
         self._server_clock.tick()
 
@@ -58,12 +72,14 @@ class HUD(object):
         ego_vel = self.sim.ego_car.get_velocity()
         ego_acc = self.sim.ego_car.get_acceleration()
 
-        speed = 3.6 * math.sqrt(ego_vel.x**2 + ego_vel.y**2)
+        speed = 3.6 * math.sqrt(ego_vel.x ** 2 + ego_vel.y ** 2)
+
+        cte = self._calc_lateral_error()  # cross-track error
 
         timestamp = self._timestamp_now_ms()
         threshold = (1000 / self._history_samples_per_sec)
         if not self.measurement_history or self.measurement_history[-1].timestamp < timestamp - threshold:
-            m = Measurement(timestamp, speed)
+            m = Measurement(timestamp, speed, cte)
             self.measurement_history.append(m)
 
         self.text = [
@@ -78,6 +94,7 @@ class HUD(object):
             self._format_text_item(f'vy:    {ego_vel.y:.3f}', 'm/s', max_len),
             self._format_text_item(f'ax:    {ego_acc.x:.3f}', 'm/s2', max_len),
             self._format_text_item(f'ay:    {ego_acc.y:.3f}', 'm/s2', max_len),
+            self._format_text_item(f'cte:    {cte:.3f}', 'm', max_len),
             '',
             'Localization:',
             self._format_text_item(f'x:   {ego_location.x:.3f}', 'm', max_len),
@@ -86,33 +103,44 @@ class HUD(object):
             ''
         ]
 
-    def _timestamp_now_ms(self):
-        return time.time_ns() / 1000000
+    def _calc_lateral_error(self) -> float:
+        cur_pose = self.sim.ego_car.get_transform().location
+        cur_pose_p = Point(cur_pose.x, cur_pose.y)
+        path_ls = LineString([(wp.transform.location.x, wp.transform.location.y) for wp in self.planner.path])
+        try:
+            return path_ls.distance(cur_pose_p)
+        except:
+            return 999
+
+    def _timestamp_now_ms(self) -> int:
+        return time.time_ns() // 1000000
 
     def _format_text_item(self, text: str, r_suffix: str, max_len: int):
         to_fill = max_len - len(text) - len(r_suffix)
-        return text + ' '*to_fill + r_suffix
-
+        return text + ' ' * to_fill + r_suffix
 
     def render(self, display):
         # tinted background
-        display.blit(self.background_surface, (0,0))
+        display.blit(self.background_surface, (0, 0))
 
         # text items
         v_offset = 4
         for text_item in self.text:
-            surface = self._font_mono.render(text_item, True, (255,255,255))
+            surface = self._font_mono.render(text_item, True, (255, 255, 255))
             display.blit(surface, (8, v_offset))
             v_offset += 18
 
         # speed graph
         now = self._timestamp_now_ms()
         xs = []
-        ys = []
+        speed_hist = []
+        cte_hist = []
         for m in self.measurement_history:
-            t = (m.timestamp - now) / 1000 # seconds
+            t = (m.timestamp - now) / 1000  # seconds
             if t < -10:
                 continue
             xs.append(t)
-            ys.append(m.speed)
-        self.speed_graph.render(display, xs, ys, pg.Color(0,200,0))
+            speed_hist.append(m.speed)
+            cte_hist.append(m.lateral_error)
+        self.speed_graph.render(display, xs, speed_hist, pg.Color(0, 200, 0))
+        self.cte_graph.render(display, xs, cte_hist, pg.Color(0, 200, 0))

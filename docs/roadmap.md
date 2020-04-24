@@ -1,10 +1,10 @@
-# Milestone 01
+# Milestone 1
 
 Driving around a block using the simplest approach.
 
 ## Scene Setup
 
-- Map: `Town02`
+- Map: `Town06`
 - Weather: default
 - Vehicle: `Toyota Prius`
 

@@ -1,4 +1,4 @@
-from carla import Waypoint
+from carla import Waypoint, Location
 
 
 class WaypointWithSpeedLimit(object):
@@ -14,3 +14,12 @@ class WaypointWithSpeedLimit(object):
     @property
     def y(self):
         return self.waypoint.transform.location.y
+
+    def distance(self, other) -> float:
+        if type(other) == Location:
+            return self.waypoint.transform.location.distance(other)
+        if type(other) == Waypoint:
+            return self.distance(other.transform.location)
+        if type(other) == WaypointWithSpeedLimit:
+            return self.distance(other.waypoint)
+        raise ValueError(f'Unsupported type {type(other)}')

@@ -49,21 +49,21 @@ class Graph(object):
     def set_title(self, title: str):
         self.title = title
 
-    def set_xlim(self, xlim: Tuple[int, int]):
+    def set_xlim(self, xlim: Tuple[float, float]):
         self.xlim = xlim
 
-    def set_ylim(self, ylim: Tuple[int, int]):
+    def set_ylim(self, ylim: Tuple[float, float]):
         self.ylim = ylim
 
     def set_line_size(self, line_size: int):
         self.line_size = line_size
 
-    def _get_xlim(self, xs) -> Tuple[int, int]:
+    def _get_xlim(self, xs) -> Tuple[float, float]:
         if self.xlim:
             return self.xlim
         return np.amin(xs), np.amax(xs)
 
-    def _get_ylim(self, yys) -> Tuple[int, int]:
+    def _get_ylim(self, yys) -> Tuple[float, float]:
         if self.ylim:
             return self.ylim
         # else find min/max data values

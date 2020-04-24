@@ -4,10 +4,12 @@ from typing import Tuple
 import carla
 import pygame as pg
 
+from carla_ai.av.control import Controller
 from carla_ai.av.planner import Planner
 from carla_ai.debugger import Debugger
 from carla_ai.hud import HUD
 from carla_ai.sim import Simulation
+from carla_ai.state_updater import StateUpdater
 
 
 class Game(object):
@@ -17,12 +19,16 @@ class Game(object):
 
         self.simulation = Simulation(display_size, world)
         self.planner = Planner(self.simulation)
-        self.hud = HUD(display_size, self.simulation, self.planner)
+        self.state_updater = StateUpdater(self.simulation, self.planner)
+        self.controller = Controller(self.simulation, self.state_updater)
+        self.hud = HUD(display_size, self.simulation, self.planner, self.state_updater)
         self.debugger = Debugger(self.simulation, self.planner)
 
     def tick(self, clock: pg.time.Clock):
         self.simulation.tick(clock)
+        self.state_updater.update()
         self.planner.plan()
+        self.controller.tick()
         self.hud.tick(clock)
         self.debugger.tick(clock)
 
@@ -36,7 +42,7 @@ class Game(object):
 
 def main():
     W, H = [1280, 720]
-    map_name = 'Town02'
+    map_name = 'Town06'
 
     pg.init()
     pg.font.init()

@@ -4,19 +4,20 @@ import time
 from typing import Tuple
 
 import pygame as pg
-from shapely.geometry import Point, LineString
 
 from carla_ai.ui import font, Graph
 from carla_ai.measurement import Measurement
 from carla_ai.sim import Simulation
 from carla_ai.av import Planner
+from carla_ai.state_updater import StateUpdater
 
 
 class HUD(object):
-    def __init__(self, display_size: Tuple[int, int], sim: Simulation, planner: Planner):
+    def __init__(self, display_size: Tuple[int, int], sim: Simulation, planner: Planner, state_updater: StateUpdater):
         self.display_size = display_size
         self.sim = sim
         self.planner = planner
+        self.state_updater = state_updater
         self.world = sim.world
 
         # cache the map, as calling the method inside the tick/render method significantly reduces FPS
@@ -61,27 +62,41 @@ class HUD(object):
         #self.cte_graph.set_ylim((0, 5))
         self.cte_graph.set_line_size(1)
 
+        # init controls graph
+        controls_graph_size = (300, 200)
+        controls_graph_pos_x = self.display_size[0] - controls_graph_size[0]
+        controls_graph_pos_y = self.display_size[1] - controls_graph_size[1]
+        self.controls_graph = Graph((controls_graph_pos_x, controls_graph_pos_y), controls_graph_size, (6, 5))
+        self.controls_graph.set_title('Controls')
+        self.controls_graph.set_xlabel('Time (sec)')
+        self.controls_graph.set_ylabel('percentage')
+        self.controls_graph.set_xlim((-10, 0))
+        self.controls_graph.set_ylim((-1.1, 1.1))
+        self.controls_graph.set_line_size(1)
+
     def on_world_tick(self, timestamp):
         self._server_clock.tick()
 
     def tick(self, clock: pg.time.Clock):
         max_len = 20
-        ego_transform = self.sim.ego_car.get_transform()
-        ego_location = ego_transform.location
-        ego_heading = ego_transform.rotation.yaw
-        ego_vel = self.sim.ego_car.get_velocity()
-        ego_acc = self.sim.ego_car.get_acceleration()
 
-        speed = 3.6 * math.sqrt(ego_vel.x ** 2 + ego_vel.y ** 2)
-        target_speed = self._get_target_speed()
-        speed_err = abs(target_speed - speed)
+        speed = self.state_updater.speed
+        target_speed = self.state_updater.target_speed
+        cte = self.state_updater.cte
+        speed_err = self.state_updater.speed_err
+        ego_location = self.state_updater.ego_location
+        ego_heading = self.state_updater.ego_heading
+        ego_vel = self.state_updater.ego_vel
+        ego_acc = self.state_updater.ego_acc
 
-        cte = self._calc_lateral_error()  # cross-track error
+        control = self.sim.ego_car.get_control()
+        throttle = control.throttle if control.throttle > 0 else -control.brake
+        steer = control.steer
 
         timestamp = self._timestamp_now_ms()
         threshold = (1000 / self._history_samples_per_sec)
         if not self.measurement_history or self.measurement_history[-1].timestamp < timestamp - threshold:
-            m = Measurement(timestamp, speed, target_speed, cte, speed_err)
+            m = Measurement(timestamp, speed, target_speed, cte, speed_err, throttle, steer)
             self.measurement_history.append(m)
 
         self.text = [
@@ -102,26 +117,6 @@ class HUD(object):
             self._format_text_item(f'yaw: {ego_heading:.3f}', 'deg', max_len),
             ''
         ]
-
-    def _get_target_speed(self) -> float:
-        cur_pose = self.sim.ego_car.get_transform().location
-        closest_node = None
-        min_distance = float('inf')
-        for node in self.planner.path:
-            dist = node.waypoint.transform.location.distance(cur_pose)
-            if dist < min_distance:
-                min_distance = dist
-                closest_node = node
-        return closest_node.speed_limit if closest_node is not None else 0
-
-    def _calc_lateral_error(self) -> float:
-        cur_pose = self.sim.ego_car.get_transform().location
-        cur_pose_p = Point(cur_pose.x, cur_pose.y)
-        path_ls = LineString([(wp.x, wp.y) for wp in self.planner.path])
-        try:
-            return path_ls.distance(cur_pose_p)
-        except:
-            return 999
 
     def _timestamp_now_ms(self) -> int:
         return time.time_ns() // 1000000
@@ -148,6 +143,8 @@ class HUD(object):
         target_speed_hist = []
         cte_hist = []
         speed_err_hist = []
+        throttle_hist = []
+        steer_hist = []
         for m in self.measurement_history:
             t = (m.timestamp - now) / 1000  # seconds
             if t < -10:
@@ -157,5 +154,8 @@ class HUD(object):
             target_speed_hist.append(m.target_speed)
             cte_hist.append(m.lateral_error)
             speed_err_hist.append(m.speed_error)
+            throttle_hist.append(m.throttle)
+            steer_hist.append(m.steer)
         self.speed_graph.render(display, xs, speed_hist, pg.Color(0, 200, 0), target_speed_hist, pg.Color(200, 0, 0))
         self.cte_graph.render(display, xs, cte_hist, pg.Color(0, 200, 0), speed_err_hist, pg.Color(200, 0, 0))
+        self.controls_graph.render(display, xs, steer_hist, pg.Color(0, 200, 0), throttle_hist, pg.Color(200, 0, 0))

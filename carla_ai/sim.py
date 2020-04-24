@@ -20,7 +20,7 @@ class Simulation(object):
         ego_car_transform = random.choice(world.get_map().get_spawn_points())
 
         self.ego_car = world.spawn_actor(ego_car_bp, ego_car_transform)
-        self.ego_car.set_autopilot(True)
+        #self.ego_car.set_autopilot(True)
 
         # add 3rd-person view camera
         cam_bp = bp_lib.find('sensor.camera.rgb')

@@ -9,6 +9,7 @@ from carla_ai.av.model import WaypointWithSpeedLimit
 class Planner(object):
     def __init__(self, sim: Simulation):
         self.sim = sim
+        self.ego_location = None  # updated by StateUpdater
         self.path: List[WaypointWithSpeedLimit] = []
         self.num_waypoints = 20
         self.speed_limit = 20  # 20 km/h
@@ -23,7 +24,7 @@ class Planner(object):
         return WaypointWithSpeedLimit(wp, self.speed_limit)
 
     def _update_path(self) -> None:
-        cur_location = self.sim.ego_car.get_location()
+        cur_location = self.ego_location
         closest_wp_idx = None
         closest_distance = float('inf')
         for idx, node in enumerate(self.path):
@@ -38,7 +39,7 @@ class Planner(object):
             return
 
         # otherwise remove waypoints behind the car
-        self.path = self.path[closest_wp_idx:]
+        self.path = self.path[max(0, closest_wp_idx - 2):]
 
         # add waypoints ahead the car
         within_distance = 2

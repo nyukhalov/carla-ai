@@ -10,7 +10,7 @@ class Controller(object):
     def __init__(self, sim: Simulation, state_updater: StateUpdater):
         self.sim = sim
         self.state_updater = state_updater
-        self.steer_pid = PID(0.04, 0.0002, 0.002)
+        self.steer_pid = PID(0.04, 0, 0.002)
         self.throttle_pid = PID(0.05, 0.00022, 0.008)
         self.prev_steer = 0.0
 

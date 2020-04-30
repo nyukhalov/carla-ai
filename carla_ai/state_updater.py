@@ -24,17 +24,14 @@ class StateUpdater(object):
         self.ego_vel = 0.0
         self.ego_acc = 0.0
 
-        # This list should have 4 elements, where
-        # index 0 corresponds to the front left wheel,
-        # index 1 corresponds to the front right wheel,
-        # index 2 corresponds to the back left wheel and
-        # index 3 corresponds to the back right wheel.
-        self.wheels = self.sim.ego_car.get_physics_control().wheels
+        self.max_steer_deg = self.sim.ego_car.get_physics_control().wheels[0].max_steer_angle
+
         self.update()
 
     def update(self):
         ego_transform = self.sim.ego_car.get_transform()
         self.ego_location = self._calc_ego_location()
+        self.planner.ego_location = self.ego_location  # a hack to push ego location to planner
         self.ego_heading = ego_transform.rotation.yaw
         self.ego_vel = self.sim.ego_car.get_velocity()
         self.ego_acc = self.sim.ego_car.get_acceleration()
@@ -53,13 +50,17 @@ class StateUpdater(object):
 
     def _calc_steer_angle(self):
         steer_norm = self.sim.ego_car.get_control().steer
-        wheel = self.wheels[0]
-        max_steer_deg = wheel.max_steer_angle
-        return steer_norm * math.radians(max_steer_deg)
+        return steer_norm * math.radians(self.max_steer_deg)
 
     def _calc_ego_location(self):
-        rlw: carla.WheelPhysicsControl = self.wheels[2]  # rear left wheel
-        rrw: carla.WheelPhysicsControl = self.wheels[3]  # rear right wheel
+        # This list should have 4 elements, where
+        # index 0 corresponds to the front left wheel,
+        # index 1 corresponds to the front right wheel,
+        # index 2 corresponds to the back left wheel and
+        # index 3 corresponds to the back right wheel.
+        wheels = self.sim.ego_car.get_physics_control().wheels
+        rlw: carla.WheelPhysicsControl = wheels[2]  # rear left wheel
+        rrw: carla.WheelPhysicsControl = wheels[3]  # rear right wheel
 
         # divide by 100 because the wheels position and radius are in cm
         wheel_radius = rrw.radius / 100
@@ -68,7 +69,7 @@ class StateUpdater(object):
         return carla.Location(rear_axle_center_pos.x, rear_axle_center_pos.y, rear_axle_center_pos.z - wheel_radius)
 
     def _get_target_speed(self) -> float:
-        cur_pose = self.sim.ego_car.get_transform().location
+        cur_pose = self.ego_location
         closest_node = None
         min_distance = float('inf')
         for node in self.planner.path:
@@ -79,35 +80,42 @@ class StateUpdater(object):
         return closest_node.speed_limit if closest_node is not None else 0
 
     def _calc_lateral_error(self) -> float:
-        cur_pose = self.sim.ego_car.get_transform().location
+        cur_pose = self.ego_location
+        path = self.planner.path
 
         closest_node_idx = None
         min_distance = float('inf')
-        for idx, node in enumerate(self.planner.path):
+        for idx, node in enumerate(path):
             dist = node.waypoint.transform.location.distance(cur_pose)
             if dist < min_distance:
                 min_distance = dist
                 closest_node_idx = idx
 
         if closest_node_idx is None:
+            print('[WARN] Could not find the closest node')
             return 0.0
 
-        cur_node = self.planner.path[closest_node_idx]
-        next_node = self.planner.path[closest_node_idx + 1]
-        prev_node = self.planner.path[closest_node_idx - 1]
+        cur_node = path[closest_node_idx]
+        next_node = path[closest_node_idx + 1] if closest_node_idx < len(path) - 1 else None
+        prev_node = path[closest_node_idx - 1] if closest_node_idx > 0 else None
 
         closest_edge = None
-        if next_node.distance(cur_pose) < prev_node.distance(cur_pose):
+        if prev_node is None:
+            closest_edge = (cur_node, next_node)
+        elif next_node is None:
+            closest_edge = (prev_node, cur_node)
+        elif next_node.distance(cur_pose) < prev_node.distance(cur_pose):
             closest_edge = (cur_node, next_node)
         else:
             closest_edge = (prev_node, cur_node)
         sign = -1 if self._is_left(closest_edge, cur_pose) else 1
 
         cur_pose_p = Point(cur_pose.x, cur_pose.y)
-        path_ls = LineString([(wp.x, wp.y) for wp in self.planner.path])
+        path_ls = LineString([(node.x, node.y) for node in closest_edge])
         try:
             return sign * path_ls.distance(cur_pose_p)
-        except:
+        except Exception as e:
+            print(f'[ERROR] Failed to calculate the distance to the closest path edge: {e}')
             return sign * 999
 
     def _is_left(self, edge: Tuple[WaypointWithSpeedLimit, WaypointWithSpeedLimit], p: carla.Location):

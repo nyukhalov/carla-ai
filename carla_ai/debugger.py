@@ -27,7 +27,7 @@ class Debugger(object):
             for node in path:
                 self._draw_waypoint(node.waypoint, color, lifetime=lifetime)
             # draw_bbox(self.debug, veh)
-            self._draw_position_vray(lifetime=lifetime)
+            # self._draw_position_vray(lifetime=lifetime)
 
     def _timestamp_now_ms(self) -> int:
         return time.monotonic_ns() // 1000000

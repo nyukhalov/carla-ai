@@ -21,8 +21,16 @@ class StateUpdater(object):
         self.cte = 0.0
         self.ego_location = None
         self.ego_heading = 0.0
-        self.ego_vel = None
-        self.ego_acc = None
+        self.ego_vel = 0.0
+        self.ego_acc = 0.0
+
+        # This list should have 4 elements, where
+        # index 0 corresponds to the front left wheel,
+        # index 1 corresponds to the front right wheel,
+        # index 2 corresponds to the back left wheel and
+        # index 3 corresponds to the back right wheel.
+        self.wheels = self.sim.ego_car.get_physics_control().wheels
+        self.update()
 
     def update(self):
         ego_transform = self.sim.ego_car.get_transform()
@@ -45,20 +53,13 @@ class StateUpdater(object):
 
     def _calc_steer_angle(self):
         steer_norm = self.sim.ego_car.get_control().steer
-        wheel = self.sim.ego_car.get_physics_control().wheels[0]
+        wheel = self.wheels[0]
         max_steer_deg = wheel.max_steer_angle
         return steer_norm * math.radians(max_steer_deg)
 
     def _calc_ego_location(self):
-        # This list should have 4 elements, where
-        # index 0 corresponds to the front left wheel,
-        # index 1 corresponds to the front right wheel,
-        # index 2 corresponds to the back left wheel and
-        # index 3 corresponds to the back right wheel.
-        wheels = self.sim.ego_car.get_physics_control().wheels
-
-        rlw: carla.WheelPhysicsControl = wheels[2]  # rear left wheel
-        rrw: carla.WheelPhysicsControl = wheels[3]  # rear right wheel
+        rlw: carla.WheelPhysicsControl = self.wheels[2]  # rear left wheel
+        rrw: carla.WheelPhysicsControl = self.wheels[3]  # rear right wheel
 
         # divide by 100 because the wheels position and radius are in cm
         wheel_radius = rrw.radius / 100

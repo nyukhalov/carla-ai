@@ -26,8 +26,8 @@ The localization module uses the ground truth car pose provided by Carla.
 **Path**
 
 - Initial pose: a random spawn point
-- Goal pose: N/A
-- Path: driving along the waypoints, taking a random turn at all forks
+- Goal pose: another random spawn point
+- Path: shortest path, driving along the waypoints
 - Obstacle avoidance: N/A
 
 **Velocity**

@@ -24,7 +24,7 @@ class StateUpdater(object):
 
     def update(self):
         ego_transform = self.sim.ego_car.get_transform()
-        self.ego_location = ego_transform.location
+        self.ego_location = self._calc_ego_location()
         self.ego_heading = ego_transform.rotation.yaw
         self.ego_vel = self.sim.ego_car.get_velocity()
         self.ego_acc = self.sim.ego_car.get_acceleration()
@@ -33,6 +33,23 @@ class StateUpdater(object):
         self.target_speed = self._get_target_speed()
         self.speed_err = self.target_speed - self.speed
         self.cte = self._calc_lateral_error()  # cross-track error
+
+    def _calc_ego_location(self):
+        # This list should have 4 elements, where
+        # index 0 corresponds to the front left wheel,
+        # index 1 corresponds to the front right wheel,
+        # index 2 corresponds to the back left wheel and
+        # index 3 corresponds to the back right wheel.
+        wheels = self.sim.ego_car.get_physics_control().wheels
+
+        rlw: carla.WheelPhysicsControl = wheels[2]  # rear left wheel
+        rrw: carla.WheelPhysicsControl = wheels[3]  # rear right wheel
+
+        # divide by 100 because the wheels position and radius are in cm
+        wheel_radius = rrw.radius / 100
+        rear_axle_center_pos = (rlw.position + rrw.position) / (2 * 100)
+
+        return carla.Location(rear_axle_center_pos.x, rear_axle_center_pos.y, rear_axle_center_pos.z - wheel_radius)
 
     def _get_target_speed(self) -> float:
         cur_pose = self.sim.ego_car.get_transform().location

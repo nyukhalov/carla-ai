@@ -22,7 +22,7 @@ class Game(object):
         self.state_updater = StateUpdater(self.simulation, self.planner)
         self.controller = Controller(self.simulation, self.state_updater)
         self.hud = HUD(display_size, self.simulation, self.planner, self.state_updater)
-        self.debugger = Debugger(self.simulation, self.planner)
+        self.debugger = Debugger(self.simulation, self.planner, self.state_updater)
 
     def tick(self, clock: pg.time.Clock):
         self.simulation.tick(clock)

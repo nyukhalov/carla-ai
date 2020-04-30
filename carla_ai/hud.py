@@ -1,15 +1,14 @@
 import collections
-import math
 import time
 from typing import Tuple
 
 import pygame as pg
 
-from carla_ai.ui import font, Graph
+from carla_ai.av import Planner
 from carla_ai.measurement import Measurement
 from carla_ai.sim import Simulation
-from carla_ai.av import Planner
 from carla_ai.state_updater import StateUpdater
+from carla_ai.ui import font, Graph, WheelsIndicator
 
 
 class HUD(object):
@@ -74,6 +73,12 @@ class HUD(object):
         self.controls_graph.set_ylim((-1.1, 1.1))
         self.controls_graph.set_line_size(1)
 
+        # init wheels indicator
+        wheels_ind_size = (130, 200)
+        wheels_ind_pos_x = self.display_size[0] - wheels_ind_size[0]
+        wheels_ind_pos_y = self.display_size[1] - wheels_ind_size[1] - controls_graph_size[1]
+        self.wheels_ind = WheelsIndicator((wheels_ind_pos_x, wheels_ind_pos_y), wheels_ind_size)
+
     def on_world_tick(self, timestamp):
         self._server_clock.tick()
 
@@ -88,15 +93,16 @@ class HUD(object):
         ego_heading = self.state_updater.ego_heading
         ego_vel = self.state_updater.ego_vel
         ego_acc = self.state_updater.ego_acc
+        steer = self.state_updater.steer
 
         control = self.sim.ego_car.get_control()
-        throttle = control.throttle if control.throttle > 0 else -control.brake
-        steer = control.steer
+        throttle_cmd = control.throttle if control.throttle > 0 else -control.brake
+        steer_cmd = control.steer
 
         timestamp = self._timestamp_now_ms()
         threshold = (1000 / self._history_samples_per_sec)
         if not self.measurement_history or self.measurement_history[-1].timestamp < timestamp - threshold:
-            m = Measurement(timestamp, speed, target_speed, cte, speed_err, throttle, steer)
+            m = Measurement(timestamp, speed, target_speed, cte, speed_err, throttle_cmd, steer_cmd)
             self.measurement_history.append(m)
 
         self.text = [
@@ -110,6 +116,7 @@ class HUD(object):
             self._format_text_item(f'tar_spd: {target_speed:.3f}', 'km/h', max_len) + '  ' + self._format_text_item(f'vy: {ego_vel.y:.3f}', 'm/s', max_len),
             self._format_text_item(f'spd_err: {speed_err:.3f}', 'km/h', max_len)    + '  ' + self._format_text_item(f'ax: {ego_acc.x:.3f}', 'm/s2', max_len),
             self._format_text_item(f'cte:     {cte:.3f}', 'm', max_len)             + '  ' + self._format_text_item(f'ay: {ego_acc.y:.3f}', 'm/s2', max_len),
+            self._format_text_item(f'steer:   {steer:.3f}', 'rad', max_len),
             '',
             'Localization:',
             self._format_text_item(f'x:   {ego_location.x:.3f}', 'm', max_len),
@@ -154,8 +161,12 @@ class HUD(object):
             target_speed_hist.append(m.target_speed)
             cte_hist.append(m.lateral_error)
             speed_err_hist.append(m.speed_error)
-            throttle_hist.append(m.throttle)
-            steer_hist.append(m.steer)
+            throttle_hist.append(m.throttle_cmd)
+            steer_hist.append(m.steer_cmd)
         self.speed_graph.render(display, xs, speed_hist, pg.Color(0, 200, 0), target_speed_hist, pg.Color(200, 0, 0))
         self.cte_graph.render(display, xs, cte_hist, pg.Color(0, 200, 0), speed_err_hist, pg.Color(200, 0, 0))
         self.controls_graph.render(display, xs, steer_hist, pg.Color(0, 200, 0), throttle_hist, pg.Color(200, 0, 0))
+
+        # wheels indicator
+        turn_angle = self.state_updater.steer
+        self.wheels_ind.render(display, turn_angle)

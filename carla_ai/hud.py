@@ -8,7 +8,7 @@ from carla_ai.av import Planner
 from carla_ai.measurement import Measurement
 from carla_ai.sim import Simulation
 from carla_ai.state_updater import StateUpdater
-from carla_ai.ui import font, Graph, WheelsIndicator
+from carla_ai.ui import font, Graph, WheelsIndicator, SteeringWheel
 
 
 class HUD(object):
@@ -78,6 +78,11 @@ class HUD(object):
         wheels_ind_pos_x = self.display_size[0] - wheels_ind_size[0]
         wheels_ind_pos_y = self.display_size[1] - wheels_ind_size[1] - controls_graph_size[1]
         self.wheels_ind = WheelsIndicator((wheels_ind_pos_x, wheels_ind_pos_y), wheels_ind_size)
+
+        # init steering wheel
+        steering_wheel_size = (170, 200)
+        steering_wheel_pos = (self.display_size[0] - steering_wheel_size[0] - wheels_ind_size[0], wheels_ind_pos_y)
+        self.steering_wheel = SteeringWheel(steering_wheel_pos, steering_wheel_size)
 
     def on_world_tick(self, timestamp):
         self._server_clock.tick()
@@ -170,3 +175,6 @@ class HUD(object):
         # wheels indicator
         turn_angle = self.state_updater.steer
         self.wheels_ind.render(display, turn_angle)
+
+        # steering wheel
+        self.steering_wheel.render(display, self.state_updater.steering_wheel_angle)

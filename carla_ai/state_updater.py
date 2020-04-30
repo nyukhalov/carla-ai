@@ -14,6 +14,7 @@ class StateUpdater(object):
         self.sim = sim
         self.planner = planner
         self.steer = 0.0
+        self.steering_wheel_angle = 0.0
         self.speed = 0.0
         self.target_speed = 0.0
         self.speed_err = 0.0
@@ -31,17 +32,22 @@ class StateUpdater(object):
         self.ego_acc = self.sim.ego_car.get_acceleration()
 
         self.steer = self._calc_steer_angle()
+        self.steering_wheel_angle = self._calc_steering_wheel_angle()
         self.speed = 3.6 * math.sqrt(self.ego_vel.x ** 2 + self.ego_vel.y ** 2)
         self.target_speed = self._get_target_speed()
         self.speed_err = self.target_speed - self.speed
         self.cte = self._calc_lateral_error()  # cross-track error
+
+    def _calc_steering_wheel_angle(self):
+        steer_norm = self.sim.ego_car.get_control().steer
+        max_angle = math.radians(450)  # a random number
+        return steer_norm * max_angle
 
     def _calc_steer_angle(self):
         steer_norm = self.sim.ego_car.get_control().steer
         wheel = self.sim.ego_car.get_physics_control().wheels[0]
         max_steer_deg = wheel.max_steer_angle
         return steer_norm * math.radians(max_steer_deg)
-
 
     def _calc_ego_location(self):
         # This list should have 4 elements, where

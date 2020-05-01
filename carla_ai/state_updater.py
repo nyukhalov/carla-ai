@@ -99,7 +99,9 @@ class StateUpdater(object):
         return closest_node.speed_limit
 
     def _calc_lateral_error(self) -> float:
-        cur_pose = self.ego_location
+        # use the center position intead of the rear axle center position
+        # as it works better with PID steering controller
+        cur_pose = self.sim.ego_car.get_transform().location
         path = self.planner.path
 
         closest_node_idx = None

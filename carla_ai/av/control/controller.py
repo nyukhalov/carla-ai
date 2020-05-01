@@ -10,7 +10,7 @@ class Controller(object):
     def __init__(self, sim: Simulation, state_updater: StateUpdater):
         self.sim = sim
         self.state_updater = state_updater
-        self.steer_pid = PID(0.04, 0, 0.002)
+        self.steer_pid = PID(0.03, 0, 0.02)
         self.throttle_pid = PID(0.05, 0.00022, 0.008)
         self.prev_steer = 0.0
 
@@ -18,7 +18,7 @@ class Controller(object):
         cte = self.state_updater.cte
         speed_err = self.state_updater.speed_err
 
-        max_delta = 0.05
+        max_delta = 100
         steer = clamp(-1, self.steer_pid.update(cte), 1)
         steer = clamp(self.prev_steer - max_delta, steer, self.prev_steer + max_delta)
         self.prev_steer = steer

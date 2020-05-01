@@ -126,7 +126,7 @@ class HUD(object):
             'Localization:',
             self._format_text_item(f'x:   {ego_location.x:.3f}', 'm', max_len),
             self._format_text_item(f'y:   {ego_location.y:.3f}', 'm', max_len),
-            self._format_text_item(f'yaw: {ego_heading:.3f}', 'deg', max_len),
+            self._format_text_item(f'yaw: {ego_heading:.3f}', 'rad', max_len),
             ''
         ]
 

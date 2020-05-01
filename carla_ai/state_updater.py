@@ -5,7 +5,7 @@ from shapely.geometry import Point, LineString
 import carla
 
 from carla_ai.av import Planner
-from carla_ai.av.model import WaypointWithSpeedLimit
+from carla_ai.av.model import WaypointWithSpeedLimit, VehicleInfo
 from carla_ai.sim import Simulation
 
 
@@ -24,15 +24,38 @@ class StateUpdater(object):
         self.ego_vel = 0.0
         self.ego_acc = 0.0
 
-        self.max_steer_deg = self.sim.ego_car.get_physics_control().wheels[0].max_steer_angle
+        self.veh_info = self._init_vehicle_info()
 
         self.update()
 
+    def _init_vehicle_info(self):
+        wheels = self.sim.ego_car.get_physics_control().wheels
+        max_steer_angle = math.radians(wheels[0].max_steer_angle)
+        wheel_base = 0.0  # TODO: calc
+
+        rlw: carla.WheelPhysicsControl = wheels[2]  # rear left wheel
+        rrw: carla.WheelPhysicsControl = wheels[3]  # rear right wheel
+
+        center_pos: carla.Location = self.sim.ego_car.get_transform().location
+
+        l_wheel_pos = carla.Location(rlw.position.x / 100, rlw.position.y / 100, rlw.position.z / 100)
+        r_wheel_pos = carla.Location(rrw.position.x / 100, rrw.position.y / 100, rrw.position.z / 100)
+
+        dist_between_rear_wheels = l_wheel_pos.distance(r_wheel_pos)
+        rear_axle_pos_offset_1 = math.sqrt(l_wheel_pos.distance(center_pos)**2 - (dist_between_rear_wheels/2)**2)
+        rear_axle_pos_offset_2 = math.sqrt(r_wheel_pos.distance(center_pos)**2 - (dist_between_rear_wheels/2)**2)
+        rear_axle_pos_offset = (rear_axle_pos_offset_1 + rear_axle_pos_offset_2) / 2
+
+        return VehicleInfo(
+            max_steer_angle,
+            wheel_base,
+            rear_axle_pos_offset
+        )
+
     def update(self):
-        ego_transform = self.sim.ego_car.get_transform()
-        self.ego_location = self._calc_ego_location()
+        self.ego_heading = math.radians(self.sim.ego_car.get_transform().rotation.yaw)
+        self.ego_location = self._calc_ego_location(self.ego_heading)
         self.planner.ego_location = self.ego_location  # a hack to push ego location to planner
-        self.ego_heading = ego_transform.rotation.yaw
         self.ego_vel = self.sim.ego_car.get_velocity()
         self.ego_acc = self.sim.ego_car.get_acceleration()
 
@@ -43,6 +66,15 @@ class StateUpdater(object):
         self.speed_err = self.target_speed - self.speed
         self.cte = self._calc_lateral_error()  # cross-track error
 
+    def _calc_ego_location(self, heading):
+        return self._get_veh_pos(self.sim.ego_car.get_transform().location, heading)
+
+    def _get_veh_pos(self, center_pos: carla.Location, heading: float) -> carla.Location:
+        rear_axle_pos_offset = self.veh_info.rear_axle_pos_offset
+        x = center_pos.x - rear_axle_pos_offset * math.cos(heading)
+        y = center_pos.y - rear_axle_pos_offset * math.sin(heading)
+        return carla.Location(x, y, center_pos.z)
+
     def _calc_steering_wheel_angle(self):
         steer_norm = self.sim.ego_car.get_control().steer
         max_angle = math.radians(450)  # a random number
@@ -50,23 +82,7 @@ class StateUpdater(object):
 
     def _calc_steer_angle(self):
         steer_norm = self.sim.ego_car.get_control().steer
-        return steer_norm * math.radians(self.max_steer_deg)
-
-    def _calc_ego_location(self):
-        # This list should have 4 elements, where
-        # index 0 corresponds to the front left wheel,
-        # index 1 corresponds to the front right wheel,
-        # index 2 corresponds to the back left wheel and
-        # index 3 corresponds to the back right wheel.
-        wheels = self.sim.ego_car.get_physics_control().wheels
-        rlw: carla.WheelPhysicsControl = wheels[2]  # rear left wheel
-        rrw: carla.WheelPhysicsControl = wheels[3]  # rear right wheel
-
-        # divide by 100 because the wheels position and radius are in cm
-        wheel_radius = rrw.radius / 100
-        rear_axle_center_pos = (rlw.position + rrw.position) / (2 * 100)
-
-        return carla.Location(rear_axle_center_pos.x, rear_axle_center_pos.y, rear_axle_center_pos.z - wheel_radius)
+        return steer_norm * self.veh_info.max_steer_angle
 
     def _get_target_speed(self) -> float:
         cur_pose = self.ego_location
@@ -77,7 +93,10 @@ class StateUpdater(object):
             if dist < min_distance:
                 min_distance = dist
                 closest_node = node
-        return closest_node.speed_limit if closest_node is not None else 0
+        if closest_node is None:
+            print('[WARN] The path is empty')
+            return 0
+        return closest_node.speed_limit
 
     def _calc_lateral_error(self) -> float:
         cur_pose = self.ego_location

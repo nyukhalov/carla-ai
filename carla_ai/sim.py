@@ -1,4 +1,5 @@
 import random
+import time
 import weakref
 from typing import Tuple
 
@@ -21,6 +22,9 @@ class Simulation(object):
 
         self.ego_car = world.spawn_actor(ego_car_bp, ego_car_transform)
         #self.ego_car.set_autopilot(True)
+        while self.ego_car.get_transform().location == carla.Location(0, 0, 0):
+            print('[WARN] Waiting until the ego car actor gets updated')
+            time.sleep(1)
 
         # add 3rd-person view camera
         cam_bp = bp_lib.find('sensor.camera.rgb')

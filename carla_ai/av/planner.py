@@ -15,8 +15,11 @@ class Planner(object):
         self.speed_limit = 20  # 20 km/h
 
     def plan(self) -> None:
+        if self.ego_location is None:
+            print('[WARN] Ego car position has not been initialized in planner')
+            return
         if not self.path:
-            closest_wp = self.sim.map.get_waypoint(self.sim.ego_car.get_location(), lane_type=carla.LaneType.Driving)
+            closest_wp = self.sim.map.get_waypoint(self.ego_location, lane_type=carla.LaneType.Driving)
             self.path = [self._make_wp_with_speed_limit(closest_wp)]
         self._update_path()
 
@@ -35,6 +38,7 @@ class Planner(object):
 
         # if the car goes off the track, then reset the path
         if closest_distance > 5:
+            print('[WARN] The car is too far from the path. Resetting the path')
             self.path = []
             return
 

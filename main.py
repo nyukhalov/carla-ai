@@ -41,7 +41,7 @@ class Game(object):
 
 
 def main():
-    W, H = [1280, 720]
+    W, H = [1920, 1080]
     map_name = 'Town06'
 
     pg.init()

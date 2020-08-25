@@ -1,8 +1,14 @@
 name: carla-ai
+channels:
+  - conda-forge
 dependencies:
   - python=3.7
-  - numpy
-  - shapely
+  - opencv=4.4.0
   - pip:
     - pygame
+    - pyyaml
+    - shapely
+    - numpy
+    - rospkg
+    - empy
 

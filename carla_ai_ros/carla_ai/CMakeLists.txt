@@ -1,15 +1,17 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(carla_ai_test)
+project(carla_ai)
 
 find_package(catkin REQUIRED COMPONENTS rospy roslaunch)
 
+# Install the python package
 catkin_python_setup()
 
-roslaunch_add_file_check(launch IGNORE_UNSET_ARGS)
+roslaunch_add_file_check(launch)
 
 catkin_package(CATKIN_DEPENDS rospy)
 
-catkin_install_python(PROGRAMS src/carla_ai_test/carla_ai_test.py
+# Install executables
+catkin_install_python(PROGRAMS nodes/viewer_node nodes/ego_node
                       DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 install(DIRECTORY launch/

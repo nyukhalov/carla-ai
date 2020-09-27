@@ -1,18 +1,31 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>carla_ai_test</name>
+  <name>carla_ai</name>
   <version>0.0.0</version>
-  <description>The carla_ai_test package</description>
+  <description>The carla_ai package</description>
   <maintainer email="r.nyukhalov@gmail.com">Roman Niukhalov</maintainer>
   <license>MIT</license>
+
   <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>python3-catkin-pkg</buildtool_depend>
+
   <build_depend>rospy</build_depend>
   <build_depend>roslaunch</build_depend>
-  <build_depend>carla_ego_vehicle</build_depend>
   <build_export_depend>rospy</build_export_depend>
+
   <exec_depend>rospy</exec_depend>
-  <exec_depend>topic_tools</exec_depend>
+  <exec_depend>carla_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+
+  <!-- carla-ros-bridge dependencies -->
   <exec_depend>carla_ego_vehicle</exec_depend>
+
+  <!-- Python dependencies -->
+  <exec_depend>python3-pygame</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+
   <export>
   </export>
 </package>

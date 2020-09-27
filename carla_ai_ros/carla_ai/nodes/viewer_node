@@ -3,7 +3,7 @@ from __future__ import print_function
 
 import traceback
 
-from carla_ai_viewer import CamViewRenderer
+from carla_ai import CamViewRenderer
 import pygame as pg
 import rospy
 

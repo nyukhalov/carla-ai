@@ -5,7 +5,7 @@ import time
 import carla
 import rospy
 import tf
-from carla_msgs.msg import CarlaEgoVehicleStatus, CarlaEgoVehicleInfo, CarlaEgoVehicleInfoWheel
+from carla_msgs.msg import CarlaEgoVehicleStatus, CarlaEgoVehicleInfo, CarlaEgoVehicleInfoWheel, CarlaWorldInfo
 from shapely.geometry import Point, LineString
 
 from carla_ai.av.model import WaypointWithSpeedLimit, VehicleInfo
@@ -25,6 +25,7 @@ class StateUpdater(object):
         self.ego_vel: carla.Vector3D = carla.Vector3D(0, 0, 0)
         self.ego_acc: carla.Vector3D = carla.Vector3D(0, 0, 0)
         self.veh_info: Optional[VehicleInfo] = None
+        self.map_name: str = "Unknown"
 
         self._tf_listener = tf.TransformListener()
         self._vehicle_info_subscriber = rospy.Subscriber(
@@ -36,6 +37,11 @@ class StateUpdater(object):
             f"/carla/{role_name}/vehicle_status",
             CarlaEgoVehicleStatus,
             self._on_vehicle_status
+        )
+        self._world_info_subscriber = rospy.Subscriber(
+            "/carla/world_info",
+            CarlaWorldInfo,
+            self._on_world_info
         )
 
     def _on_vehicle_info(self, msg: CarlaEgoVehicleInfo) -> None:
@@ -79,6 +85,9 @@ class StateUpdater(object):
         self.ego_heading = yaw
         self.ego_location: carla.Location = self._get_veh_pos(center_pos, self.ego_heading)
 
+    def _on_world_info(self, msg: CarlaWorldInfo) -> None:
+        self.map_name = msg.map_name
+
     def _get_cur_location(self, max_attempts: int = 1) -> Tuple[carla.Location, float]:
         for attempt in range(1, max_attempts + 1):
             try:
@@ -101,6 +110,7 @@ class StateUpdater(object):
     def destroy(self) -> None:
         self._vehicle_status_subscriber.unregister()
         self._vehicle_info_subscriber.unregister()
+        self._world_info_subscriber.unregister()
 
     def _get_veh_pos(self, center_pos: carla.Location, heading: float) -> carla.Location:
         rear_axle_pos_offset = self.veh_info.rear_axle_pos_offset

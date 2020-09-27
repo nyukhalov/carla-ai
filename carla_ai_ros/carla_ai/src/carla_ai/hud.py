@@ -14,8 +14,6 @@ class HUD(object):
         self.display_size = display_size
         self.state_updater = state_updater
 
-        self.map_name = "Unknown"
-
         self.text = None
 
         panel_width = 300
@@ -87,6 +85,7 @@ class HUD(object):
         ego_vel = self.state_updater.ego_vel
         ego_acc = self.state_updater.ego_acc
         steer = self.state_updater.steer
+        map_name = self.state_updater.map_name
 
         # control = self.sim.ego_car.get_control()
         # throttle_cmd = control.throttle if control.throttle > 0 else -control.brake
@@ -103,7 +102,7 @@ class HUD(object):
         self.text = [
             'Simulation',
             f'cFPS: {clock.get_fps():.0f}',
-            f'Map:  {self.map_name}',
+            f'Map:  {map_name}',
             '',
             'Vehicle State',
             self._format_text_item(f'cur_spd: {speed:.3f}', 'km/h', max_len)        + '  ' + self._format_text_item(f'vx: {ego_vel.x:.3f}', 'm/s', max_len),

@@ -14,12 +14,12 @@
   <build_export_depend>rospy</build_export_depend>
 
   <exec_depend>rospy</exec_depend>
-  <exec_depend>carla_msgs</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>std_msgs</exec_depend>
 
   <!-- carla-ros-bridge dependencies -->
   <exec_depend>carla_ego_vehicle</exec_depend>
+  <exec_depend>carla_msgs</exec_depend>
 
   <!-- Python dependencies -->
   <exec_depend>python3-pygame</exec_depend>

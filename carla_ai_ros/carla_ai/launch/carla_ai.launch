@@ -26,5 +26,9 @@
     <param name="role_name" value="$(arg role_name)"/>
   </node>
 
+  <node pkg="carla_ai" type="control_node" name="carla_ai_control_$(arg role_name)" output="screen">
+    <param name="role_name" value="$(arg role_name)"/>
+  </node>
+
 </launch>
 

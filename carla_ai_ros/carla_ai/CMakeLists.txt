@@ -11,7 +11,10 @@ roslaunch_add_file_check(launch)
 catkin_package(CATKIN_DEPENDS rospy)
 
 # Install executables
-catkin_install_python(PROGRAMS nodes/viewer_node nodes/ego_node
+catkin_install_python(PROGRAMS
+                        nodes/viewer_node
+                        nodes/ego_node
+                        nodes/control_node
                       DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 install(DIRECTORY launch/

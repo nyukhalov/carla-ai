@@ -6,19 +6,21 @@ from carla_ai.av.model import WaypointWithSpeedLimit
 
 
 class Planner(object):
-    def __init__(self):
-        self.ego_location = None  # updated by StateUpdater
+    def __init__(self, map: carla.Map, ego: carla.Actor):
+        print('Actor ID: ', ego.id)
+        print('Actor type ID: ', ego.type_id)
+        self.map = map
+        self.ego = ego
+        self.ego_location = None
         self.path: List[WaypointWithSpeedLimit] = []
         self.num_waypoints = 20
-        self.speed_limit = 20  # 20 km/h
+        self.speed_limit = 10  # 20 km/h
 
     def plan(self) -> None:
-        if self.ego_location is None:
-            print('[WARN] Ego car position has not been initialized in planner')
-            return
+        self.ego_location = self.ego.get_transform().location
         if not self.path:
-            # closest_wp = self.sim.map.get_waypoint(self.ego_location, lane_type=carla.LaneType.Driving)
-            # self.path = [self._make_wp_with_speed_limit(closest_wp)]
+            closest_wp = self.map.get_waypoint(self.ego_location, lane_type=carla.LaneType.Driving)
+            self.path = [self._make_wp_with_speed_limit(closest_wp)]
             pass
         self._update_path()
 

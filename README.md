@@ -106,3 +106,11 @@ AI for Carla Simulator
    ```bash
    /opt/carla/CarlaUE4.sh
    ```
+2. Run ros-bridge
+   ```bash
+   roslaunch carla_ros_bridge carla_ros_bridge.launch
+   ```
+3. Run the Carla AI module
+   ```bash
+   roslaunch carla_ai_test carla_ai_test.launch
+   ```

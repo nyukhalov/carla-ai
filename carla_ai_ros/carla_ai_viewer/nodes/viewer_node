@@ -1,0 +1,58 @@
+#!/usr/bin/env python
+from __future__ import print_function
+
+import traceback
+
+from carla_ai_viewer import CamViewRenderer
+import pygame as pg
+import rospy
+
+
+class Viewer(object):
+    def __init__(self, role_name: str):
+        self._renderer = CamViewRenderer(role_name)
+
+    def tick(self, clock: pg.time.Clock):
+        self._renderer.tick(clock)
+
+    def render(self, display: pg.display):
+        self._renderer.render(display)
+
+    def destroy(self):
+        self._renderer.destroy()
+
+
+def main():
+    rospy.init_node('carla_ai_viewer', anonymous=True)
+
+    role_name = rospy.get_param("~role_name", "ego_vehicle")
+
+    # resolution should be similar to spawned camera with role-name 'view'
+    W, H = [1920, 1080]
+
+    pg.init()
+    pg.font.init()
+
+    game = None
+    try:
+        game = Viewer(role_name)
+        pg.display.set_caption("Carla AI Viewer")
+        display = pg.display.set_mode((W, H), pg.HWSURFACE | pg.DOUBLEBUF)
+
+        clock = pg.time.Clock()
+        while True:
+            clock.tick_busy_loop(60)
+            game.tick(clock)
+            game.render(display)
+            pg.display.flip()
+    except Exception as e:
+        print('Game loop has been interrupted by exception', e)
+        traceback.print_exc()
+    finally:
+        if game is not None:
+            game.destroy()
+        pg.quit()
+
+
+if __name__ == '__main__':
+    main()

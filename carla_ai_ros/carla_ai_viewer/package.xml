@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>carla_ai_viewer</name>
+  <version>0.0.0</version>
+  <description>The carla_ai_viewer package</description>
+  <maintainer email="r.nyukhalov@gmail.com">Roman Niukhalov</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>rospy</build_depend>
+  <build_depend>roslaunch</build_depend>
+  <build_export_depend>rospy</build_export_depend>
+
+  <exec_depend>rospy</exec_depend>
+  <exec_depend>carla_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+
+  <!-- Python dependencies -->
+  <exec_depend>python3-pygame</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+
+  <export>
+  </export>
+</package>

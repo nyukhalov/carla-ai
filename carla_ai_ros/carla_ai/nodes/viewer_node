@@ -2,21 +2,27 @@
 from __future__ import print_function
 
 import traceback
+from typing import Tuple
 
-from carla_ai import CamViewRenderer
+from carla_ai import CamViewRenderer, HUD, StateUpdater
 import pygame as pg
 import rospy
 
 
 class Viewer(object):
-    def __init__(self, role_name: str):
+    def __init__(self, role_name: str, display_size: Tuple[int, int]):
         self._renderer = CamViewRenderer(role_name)
+        self._state_updater = StateUpdater()
+        self._hud = HUD(display_size, self._state_updater)
 
     def tick(self, clock: pg.time.Clock):
         self._renderer.tick(clock)
+        self._state_updater.update()
+        self._hud.tick(clock)
 
     def render(self, display: pg.display):
         self._renderer.render(display)
+        self._hud.render(display)
 
     def destroy(self):
         self._renderer.destroy()
@@ -35,7 +41,7 @@ def main():
 
     game = None
     try:
-        game = Viewer(role_name)
+        game = Viewer(role_name, (W, H))
         pg.display.set_caption("Carla AI Viewer")
         display = pg.display.set_mode((W, H), pg.HWSURFACE | pg.DOUBLEBUF)
 

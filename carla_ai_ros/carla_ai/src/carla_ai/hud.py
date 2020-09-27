@@ -4,28 +4,19 @@ from typing import Tuple
 
 import pygame as pg
 
-from carla_ai.av import Planner
 from carla_ai.measurement import Measurement
-from carla_ai.sim import Simulation
 from carla_ai.state_updater import StateUpdater
 from carla_ai.ui import font, Graph, WheelsIndicator, SteeringWheel
 
 
 class HUD(object):
-    def __init__(self, display_size: Tuple[int, int], sim: Simulation, planner: Planner, state_updater: StateUpdater):
+    def __init__(self, display_size: Tuple[int, int], state_updater: StateUpdater):
         self.display_size = display_size
-        self.sim = sim
-        self.planner = planner
         self.state_updater = state_updater
-        self.world = sim.world
 
-        # cache the map, as calling the method inside the tick/render method significantly reduces FPS
-        self.map = self.world.get_map()
+        self.map_name = "Unknown"
 
         self.text = None
-        self._server_clock = pg.time.Clock()
-
-        self.world.on_tick(self.on_world_tick)
 
         panel_width = 300
         self.background_surface = pg.Surface((panel_width, self.display_size[1]))
@@ -84,9 +75,6 @@ class HUD(object):
         steering_wheel_pos = (self.display_size[0] - steering_wheel_size[0] - wheels_ind_size[0], wheels_ind_pos_y)
         self.steering_wheel = SteeringWheel(steering_wheel_pos, steering_wheel_size)
 
-    def on_world_tick(self, timestamp):
-        self._server_clock.tick()
-
     def tick(self, clock: pg.time.Clock):
         max_len = 20
 
@@ -100,9 +88,11 @@ class HUD(object):
         ego_acc = self.state_updater.ego_acc
         steer = self.state_updater.steer
 
-        control = self.sim.ego_car.get_control()
-        throttle_cmd = control.throttle if control.throttle > 0 else -control.brake
-        steer_cmd = control.steer
+        # control = self.sim.ego_car.get_control()
+        # throttle_cmd = control.throttle if control.throttle > 0 else -control.brake
+        # steer_cmd = control.steer
+        throttle_cmd = 0
+        steer_cmd = 0
 
         timestamp = self._timestamp_now_ms()
         threshold = (1000 / self._history_samples_per_sec)
@@ -112,9 +102,8 @@ class HUD(object):
 
         self.text = [
             'Simulation',
-            f'sFPS: {self._server_clock.get_fps():.0f}',
             f'cFPS: {clock.get_fps():.0f}',
-            f'Map:  {self.map.name}',
+            f'Map:  {self.map_name}',
             '',
             'Vehicle State',
             self._format_text_item(f'cur_spd: {speed:.3f}', 'km/h', max_len)        + '  ' + self._format_text_item(f'vx: {ego_vel.x:.3f}', 'm/s', max_len),

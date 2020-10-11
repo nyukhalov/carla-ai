@@ -1,10 +1,21 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(carla_ai)
 
-find_package(catkin REQUIRED COMPONENTS rospy roslaunch)
+find_package(catkin REQUIRED COMPONENTS
+    rospy
+    roslaunch
+    message_generation
+    std_msgs
+)
 
 # Install the python package
 catkin_python_setup()
+
+# Message generation
+add_message_files(FILES
+    ControllerDebugInfo.msg
+)
+generate_messages(DEPENDENCIES std_msgs)
 
 roslaunch_add_file_check(launch)
 

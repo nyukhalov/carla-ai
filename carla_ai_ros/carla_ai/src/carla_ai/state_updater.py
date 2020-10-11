@@ -6,9 +6,9 @@ import carla
 import rospy
 import tf
 from carla_msgs.msg import CarlaEgoVehicleStatus, CarlaEgoVehicleInfo, CarlaEgoVehicleInfoWheel, CarlaWorldInfo
-from shapely.geometry import Point, LineString
+from carla_ai.msg import ControllerDebugInfo
 
-from carla_ai.av.model import WaypointWithSpeedLimit, VehicleInfo
+from carla_ai.av.model import VehicleInfo
 
 
 class StateUpdater(object):
@@ -43,6 +43,16 @@ class StateUpdater(object):
             CarlaWorldInfo,
             self._on_world_info
         )
+        self._controller_debug_info_subscriber = rospy.Subscriber(
+            f"/carla_ai/{role_name}/controller/debug_info",
+            ControllerDebugInfo,
+            self._on_controller_debug_info
+        )
+
+    def _on_controller_debug_info(self, msg: ControllerDebugInfo) -> None:
+        self.cte = msg.cross_track_error
+        self.speed_err = msg.speed_error
+        self.target_speed = msg.target_speed
 
     def _on_vehicle_info(self, msg: CarlaEgoVehicleInfo) -> None:
         wheels = msg.wheels
@@ -103,77 +113,16 @@ class StateUpdater(object):
         raise Exception(f"Unable to retrieve vehicle location after {max_attempts} attempts")
 
     def update(self) -> None:
-        self.target_speed = self._get_target_speed()
         self.speed_err = self.target_speed - self.speed
-        self.cte = self._calc_lateral_error()  # cross-track error
 
     def destroy(self) -> None:
         self._vehicle_status_subscriber.unregister()
         self._vehicle_info_subscriber.unregister()
         self._world_info_subscriber.unregister()
+        self._controller_debug_info_subscriber.unregister()
 
     def _get_veh_pos(self, center_pos: carla.Location, heading: float) -> carla.Location:
         rear_axle_pos_offset = self.veh_info.rear_axle_pos_offset
         x = center_pos.x - rear_axle_pos_offset * math.cos(heading)
         y = center_pos.y - rear_axle_pos_offset * math.sin(heading)
         return carla.Location(x, y, center_pos.z)
-
-    def _get_target_speed(self) -> float:
-        cur_pose = self.ego_location
-        closest_node = None
-        min_distance = float('inf')
-        # for node in self.planner.path:
-        #     dist = node.waypoint.transform.location.distance(cur_pose)
-        #     if dist < min_distance:
-        #         min_distance = dist
-        #         closest_node = node
-        if closest_node is None:
-            # print('[WARN] The path is empty')
-            return 0
-        return closest_node.speed_limit
-
-    def _calc_lateral_error(self) -> float:
-        return 0
-        # use the center position intead of the rear axle center position
-        # as it works better with PID steering controller
-        cur_pose = self.sim.ego_car.get_transform().location
-        path = self.planner.path
-
-        closest_node_idx = None
-        min_distance = float('inf')
-        for idx, node in enumerate(path):
-            dist = node.waypoint.transform.location.distance(cur_pose)
-            if dist < min_distance:
-                min_distance = dist
-                closest_node_idx = idx
-
-        if closest_node_idx is None:
-            print('[WARN] Could not find the closest node')
-            return 0.0
-
-        cur_node = path[closest_node_idx]
-        next_node = path[closest_node_idx + 1] if closest_node_idx < len(path) - 1 else None
-        prev_node = path[closest_node_idx - 1] if closest_node_idx > 0 else None
-
-        closest_edge = None
-        if prev_node is None:
-            closest_edge = (cur_node, next_node)
-        elif next_node is None:
-            closest_edge = (prev_node, cur_node)
-        elif next_node.distance(cur_pose) < prev_node.distance(cur_pose):
-            closest_edge = (cur_node, next_node)
-        else:
-            closest_edge = (prev_node, cur_node)
-        sign = -1 if self._is_left(closest_edge, cur_pose) else 1
-
-        cur_pose_p = Point(cur_pose.x, cur_pose.y)
-        path_ls = LineString([(node.x, node.y) for node in closest_edge])
-        try:
-            return sign * path_ls.distance(cur_pose_p)
-        except Exception as e:
-            print(f'[ERROR] Failed to calculate the distance to the closest path edge: {e}')
-            return sign * 999
-
-    def _is_left(self, edge: Tuple[WaypointWithSpeedLimit, WaypointWithSpeedLimit], p: carla.Location):
-        a, b = edge
-        return ((b.x - a.x)*(p.y - a.y) - (b.y - a.y)*(p.x - a.x)) > 0

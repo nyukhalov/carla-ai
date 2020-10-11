@@ -1,0 +1,3 @@
+float32 cross_track_error
+float32 target_speed
+float32 speed_error

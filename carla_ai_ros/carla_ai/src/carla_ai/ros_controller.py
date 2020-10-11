@@ -2,6 +2,7 @@ from typing import Tuple
 
 import carla
 from carla_msgs.msg import CarlaEgoVehicleControl, CarlaEgoVehicleStatus, CarlaWorldInfo
+from carla_ai.msg import ControllerDebugInfo
 import rospy
 import time
 
@@ -27,6 +28,9 @@ class RosController(object):
         )
         self._vehicle_control_publisher = rospy.Publisher(f"/carla/{role_name}/vehicle_control_cmd",
                                                           CarlaEgoVehicleControl, queue_size=1)
+
+        self._debug_info_publisher = rospy.Publisher(f"/carla_ai/{role_name}/controller/debug_info",
+                                                     ControllerDebugInfo, queue_size=1)
 
         rospy.wait_for_message("/carla/world_info", CarlaWorldInfo, timeout=10.0)
 
@@ -57,7 +61,8 @@ class RosController(object):
     def tick(self):
         self.planner.plan()
 
-        speed_err = self._get_target_speed() - self.speed
+        target_speed = self._get_target_speed()
+        speed_err = target_speed - self.speed
         cte = self._calc_lateral_error()  # cross-track error
 
         max_delta = 100
@@ -70,6 +75,7 @@ class RosController(object):
             throttle = 0
             brake = -throttle
 
+        # public control command
         control = CarlaEgoVehicleControl()
         control.throttle = throttle
         control.steer = steer
@@ -77,9 +83,17 @@ class RosController(object):
         control.hand_brake = False
         self._vehicle_control_publisher.publish(control)
 
+        # publish debug info
+        debug_info_msg = ControllerDebugInfo()
+        debug_info_msg.cross_track_error = cte
+        debug_info_msg.speed_error = speed_err
+        debug_info_msg.target_speed = target_speed
+        self._debug_info_publisher.publish(debug_info_msg)
+
     def destroy(self):
         self._vehicle_control_publisher.unregister()
         self._vehicle_status_subscriber.unregister()
+        self._debug_info_publisher.unregister()
 
     def _on_vehicle_status(self, msg: CarlaEgoVehicleStatus) -> None:
         self.speed = msg.velocity
@@ -141,4 +155,4 @@ class RosController(object):
 
     def _is_left(self, edge: Tuple[WaypointWithSpeedLimit, WaypointWithSpeedLimit], p: carla.Location):
         a, b = edge
-        return ((b.x - a.x)*(p.y - a.y) - (b.y - a.y)*(p.x - a.x)) > 0
+        return ((b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x)) > 0

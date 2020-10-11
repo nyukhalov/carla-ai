@@ -36,7 +36,7 @@ class HUD(object):
         self.speed_graph.set_xlabel('Time (sec)')
         self.speed_graph.set_ylabel('km/h')
         self.speed_graph.set_xlim((-10, 0))
-        self.speed_graph.set_ylim((0, 40))
+        # self.speed_graph.set_ylim((0, 40))
         self.speed_graph.set_line_size(1)
 
         # init CTE graph (lateral error)

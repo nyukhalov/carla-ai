@@ -67,7 +67,7 @@ class RosController(object):
 
         max_delta = 100
         steer = clamp(-1, self.steer_pid.update(cte), 1)
-        steer = clamp(self.prev_steer - max_delta, steer, self.prev_steer + max_delta)
+        # steer = clamp(self.prev_steer - max_delta, steer, self.prev_steer + max_delta)
         self.prev_steer = steer
         brake = 0
         throttle = clamp(-1, self.throttle_pid.update(speed_err), 1)

@@ -14,7 +14,7 @@ class Planner(object):
         self.ego_location = None
         self.path: List[WaypointWithSpeedLimit] = []
         self.num_waypoints = 20
-        self.speed_limit = 10  # 20 km/h
+        self.speed_limit = 3  # 20 km/h
 
     def plan(self) -> None:
         self.ego_location = self.ego.get_transform().location
@@ -38,7 +38,7 @@ class Planner(object):
                 closest_wp_idx = idx
 
         # if the car goes off the track, then reset the path
-        if closest_distance > 5:
+        if closest_distance > 10:
             print('[WARN] The car is too far from the path. Resetting the path')
             self.path = []
             return

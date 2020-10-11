@@ -87,11 +87,8 @@ class HUD(object):
         steer = self.state_updater.steer
         map_name = self.state_updater.map_name
 
-        # control = self.sim.ego_car.get_control()
-        # throttle_cmd = control.throttle if control.throttle > 0 else -control.brake
-        # steer_cmd = control.steer
-        throttle_cmd = 0
-        steer_cmd = 0
+        throttle_cmd = self.state_updater.throttle_cmd
+        steer_cmd = self.state_updater.steer_cmd
 
         timestamp = self._timestamp_now_ms()
         threshold = (1000 / self._history_samples_per_sec)

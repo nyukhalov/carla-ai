@@ -14,6 +14,8 @@ from carla_ai.av.model import VehicleInfo
 class StateUpdater(object):
     def __init__(self, role_name: str):
         self._role_name = role_name
+        self.steer_cmd = 0.0 # 0 .. 1
+        self.throttle_cmd = 0.0 # 0 .. 1
         self.steer = 0.0
         self.steering_wheel_angle = 0.0
         self.speed = 0.0
@@ -88,8 +90,11 @@ class StateUpdater(object):
         self.ego_acc.z = msg.acceleration.linear.z
 
         steer_norm = msg.control.steer
+        self.steer_cmd = steer_norm
         self.steer = steer_norm * self.veh_info.max_steer_angle
         self.steering_wheel_angle = steer_norm * math.radians(450)  # 450 degrees is chosen randomly
+
+        self.throttle_cmd = msg.control.throttle
 
         center_pos, yaw = self._get_cur_location()
         self.ego_heading = yaw
@@ -113,7 +118,7 @@ class StateUpdater(object):
         raise Exception(f"Unable to retrieve vehicle location after {max_attempts} attempts")
 
     def update(self) -> None:
-        self.speed_err = self.target_speed - self.speed
+        pass
 
     def destroy(self) -> None:
         self._vehicle_status_subscriber.unregister()

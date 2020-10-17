@@ -9,13 +9,14 @@ from carla_msgs.msg import CarlaEgoVehicleStatus, CarlaEgoVehicleInfo, CarlaEgoV
 from carla_ai.msg import ControllerDebugInfo
 
 from carla_ai.av.model import VehicleInfo
+from carla_ai.position_utils import get_cur_location
 
 
 class StateUpdater(object):
     def __init__(self, role_name: str):
         self._role_name = role_name
-        self.steer_cmd = 0.0 # 0 .. 1
-        self.throttle_cmd = 0.0 # 0 .. 1
+        self.steer_cmd = 0.0  # 0 .. 1
+        self.throttle_cmd = 0.0  # 0 .. 1
         self.steer = 0.0
         self.steering_wheel_angle = 0.0
         self.speed = 0.0
@@ -104,18 +105,7 @@ class StateUpdater(object):
         self.map_name = msg.map_name
 
     def _get_cur_location(self, max_attempts: int = 1) -> Tuple[carla.Location, float]:
-        for attempt in range(1, max_attempts + 1):
-            try:
-                (position, quaternion) = self._tf_listener.lookupTransform(
-                    '/map', self._role_name, rospy.Time())
-                _, _, yaw = tf.transformations.euler_from_quaternion(quaternion)
-                center_pos = carla.Location(position[0], -position[1], position[2])
-                return center_pos, -yaw
-            except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-                rospy.logwarn(f"Unable to retrieve vehicle location (attempt {attempt}/{max_attempts}")
-                if attempt < max_attempts:
-                    time.sleep(0.1)
-        raise Exception(f"Unable to retrieve vehicle location after {max_attempts} attempts")
+        return get_cur_location(self._tf_listener, self._role_name, max_attempts)
 
     def update(self) -> None:
         pass
@@ -127,6 +117,7 @@ class StateUpdater(object):
         self._controller_debug_info_subscriber.unregister()
 
     def _get_veh_pos(self, center_pos: carla.Location, heading: float) -> carla.Location:
+        """ Return the location of the center of the rear axle """
         rear_axle_pos_offset = self.veh_info.rear_axle_pos_offset
         x = center_pos.x - rear_axle_pos_offset * math.cos(heading)
         y = center_pos.y - rear_axle_pos_offset * math.sin(heading)

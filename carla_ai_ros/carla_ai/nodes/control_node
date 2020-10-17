@@ -9,7 +9,7 @@ def main():
     role_name = rospy.get_param("~role_name", "ego_vehicle")
     controller = RosController(role_name)
     try:
-        rate = rospy.Rate(5)  # ROS Rate at 20Hz
+        rate = rospy.Rate(20)  # ROS Rate at 20Hz
         while not rospy.is_shutdown():
             controller.tick()
             rate.sleep()

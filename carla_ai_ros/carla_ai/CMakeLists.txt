@@ -14,6 +14,8 @@ catkin_python_setup()
 # Message generation
 add_message_files(FILES
     ControllerDebugInfo.msg
+    WaypointWithSpeedLimit.msg
+    PlannerPath.msg
 )
 generate_messages(DEPENDENCIES std_msgs)
 
@@ -26,6 +28,7 @@ catkin_install_python(PROGRAMS
                         nodes/viewer_node
                         nodes/ego_node
                         nodes/control_node
+                        nodes/planner_node
                       DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 install(DIRECTORY launch/

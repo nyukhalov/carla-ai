@@ -30,5 +30,9 @@
     <param name="role_name" value="$(arg role_name)"/>
   </node>
 
+  <node pkg="carla_ai" type="planner_node" name="carla_ai_planner_$(arg role_name)" output="screen">
+    <param name="role_name" value="$(arg role_name)"/>
+  </node>
+
 </launch>
 

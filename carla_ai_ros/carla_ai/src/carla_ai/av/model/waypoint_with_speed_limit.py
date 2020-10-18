@@ -15,6 +15,10 @@ class WaypointWithSpeedLimit(object):
     def y(self):
         return self.waypoint.transform.location.y
 
+    @property
+    def z(self):
+        return self.waypoint.transform.location.z
+
     def distance(self, other) -> float:
         if type(other) == Location:
             return self.waypoint.transform.location.distance(other)

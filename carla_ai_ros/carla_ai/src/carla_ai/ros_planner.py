@@ -67,6 +67,7 @@ class RosPlanner:
         wp_msg = msg.WaypointWithSpeedLimit()
         wp_msg.x = wp.x
         wp_msg.y = wp.y
+        wp_msg.z = wp.z
         wp_msg.speed_limit = wp.speed_limit
         return wp_msg
 

@@ -1,12 +1,11 @@
 import math
-from typing import Tuple, Optional
-import time
+from typing import Tuple, Optional, List
 
 import carla
 import rospy
 import tf
+from carla_ai.msg import ControllerDebugInfo, PlannerPath, WaypointWithSpeedLimit
 from carla_msgs.msg import CarlaEgoVehicleStatus, CarlaEgoVehicleInfo, CarlaEgoVehicleInfoWheel, CarlaWorldInfo
-from carla_ai.msg import ControllerDebugInfo
 
 from carla_ai.av.model import VehicleInfo
 from carla_ai.position_utils import get_cur_location
@@ -29,6 +28,7 @@ class StateUpdater(object):
         self.ego_acc: carla.Vector3D = carla.Vector3D(0, 0, 0)
         self.veh_info: Optional[VehicleInfo] = None
         self.map_name: str = "Unknown"
+        self.path: List[WaypointWithSpeedLimit] = []
 
         self._tf_listener = tf.TransformListener()
         self._vehicle_info_subscriber = rospy.Subscriber(
@@ -52,6 +52,15 @@ class StateUpdater(object):
             self._on_controller_debug_info
         )
 
+        self._planner_path_sub = rospy.Subscriber(
+            f"/carla_ai/{role_name}/planner/path",
+            PlannerPath,
+            self._on_planner_path,
+        )
+
+    def _on_planner_path(self, msg: PlannerPath) -> None:
+        self.path = msg.path
+
     def _on_controller_debug_info(self, msg: ControllerDebugInfo) -> None:
         self.cte = msg.cross_track_error
         self.speed_err = msg.speed_error
@@ -66,14 +75,14 @@ class StateUpdater(object):
         rlw: CarlaEgoVehicleInfoWheel = wheels[2]  # rear left wheel
         rrw: CarlaEgoVehicleInfoWheel = wheels[3]  # rear right wheel
 
-        center_pos, _ = self._get_cur_location(max_attempts=10)
+        origin = carla.Location(0, 0, 0)  # the wheels coordinates are given with respect to the origin
 
-        l_wheel_pos = carla.Location(rlw.position.x / 100, rlw.position.y / 100, rlw.position.z / 100)
-        r_wheel_pos = carla.Location(rrw.position.x / 100, rrw.position.y / 100, rrw.position.z / 100)
+        l_wheel_pos = carla.Location(rlw.position.x, rlw.position.y, rlw.position.z)
+        r_wheel_pos = carla.Location(rrw.position.x, rrw.position.y, rrw.position.z)
 
         dist_between_rear_wheels = l_wheel_pos.distance(r_wheel_pos)
-        rear_axle_pos_offset_1 = math.sqrt(l_wheel_pos.distance(center_pos)**2 - (dist_between_rear_wheels/2)**2)
-        rear_axle_pos_offset_2 = math.sqrt(r_wheel_pos.distance(center_pos)**2 - (dist_between_rear_wheels/2)**2)
+        rear_axle_pos_offset_1 = math.sqrt(l_wheel_pos.distance(origin)**2 - (dist_between_rear_wheels/2)**2)
+        rear_axle_pos_offset_2 = math.sqrt(r_wheel_pos.distance(origin)**2 - (dist_between_rear_wheels/2)**2)
         rear_axle_pos_offset = (rear_axle_pos_offset_1 + rear_axle_pos_offset_2) / 2
 
         self.veh_info = VehicleInfo(
@@ -107,14 +116,12 @@ class StateUpdater(object):
     def _get_cur_location(self, max_attempts: int = 1) -> Tuple[carla.Location, float]:
         return get_cur_location(self._tf_listener, self._role_name, max_attempts)
 
-    def update(self) -> None:
-        pass
-
     def destroy(self) -> None:
         self._vehicle_status_subscriber.unregister()
         self._vehicle_info_subscriber.unregister()
         self._world_info_subscriber.unregister()
         self._controller_debug_info_subscriber.unregister()
+        self._planner_path_sub.unregister()
 
     def _get_veh_pos(self, center_pos: carla.Location, heading: float) -> carla.Location:
         """ Return the location of the center of the rear axle """

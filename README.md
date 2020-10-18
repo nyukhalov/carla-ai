@@ -108,7 +108,7 @@ AI for Carla Simulator
    ```
 2. Run ros-bridge
    ```bash
-   roslaunch carla_ros_bridge carla_ros_bridge.launch
+   roslaunch carla_ros_bridge carla_ros_bridge.launch town:=Town06
    ```
 3. Run the Carla AI module
    ```bash

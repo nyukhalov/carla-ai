@@ -1,8 +1,12 @@
+"""
+Setup for carla_ai
+"""
+
 from distutils.core import setup
 from catkin_pkg.python_setup import generate_distutils_setup
 
 d = generate_distutils_setup(
-    packages=['carla_ai_test'],
+    packages=['carla_ai'],
     package_dir={'': 'src'}
 )
 

@@ -50,7 +50,7 @@ AI for Carla Simulator
   ```
 - Install the following libraries
   ```bash
-  sudo apt install python3-rosdep libsdl-image1.2-dev libsdl-mixer1.2-dev libsdl-ttf2.0-dev libsdl1.2-dev libsmpeg-dev python-numpy subversion libportmidi-dev ffmpeg libswscale-dev libavformat-dev libavcodec-dev
+  sudo apt install python-is-python3 python3-rosdep libsdl-image1.2-dev libsdl-mixer1.2-dev libsdl-ttf2.0-dev libsdl1.2-dev libsmpeg-dev python-numpy subversion libportmidi-dev ffmpeg libswscale-dev libavformat-dev libavcodec-dev
   ```
 - Install [libxerces-c v3.1](https://github.com/apache/xerces-c/tree/v3.1.4)
   ```bash
@@ -71,6 +71,7 @@ AI for Carla Simulator
   mkdir catkin_ws/src
   cd catkin_ws/src
   ln -s /path/to/ros-bridge
+  ln -s /path/to/carla-ai
   cd ..
   sudo rosdep init
   rosdep update
@@ -82,16 +83,16 @@ AI for Carla Simulator
   source /opt/ros/noetic/setup.zsh
   source devel/setup.zsh
   ```
-- Add the path to the conda environent to PYTHONPATH env variable
-  ```bash
-  export PYTHONPATH="/home/roman/miniconda3/envs/carla-ai/lib/python3.7/site-packages:$PYTHONPATH"
-  ```
 - Add the path to the carla egg to PYTHONPATH env variable
   ```bash
   # for carla installed as Ubuntu package
   export PYTHONPATH="/opt/carla-simulator/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg:$PYTHONPATH"
   # for carla distr downloaded from github
-  export PYTHONPATH="/opt/carla-nightly/PythonAPI/carla/dist/carla-0.9.10-py3.7-linux-x86_64.egg:$PYTHONPATH"
+  export PYTHONPATH="/opt/carla-0.9.10.1/PythonAPI/carla/dist/carla-0.9.10-py3.7-linux-x86_64.egg:$PYTHONPATH"
+  ```
+- Add the path to the system python to PYTHONPATH env variable
+  ```bash
+  export PYTHONPATH="/usr/lib/python3/dist-packages:$PYTHONPATH"
   ```
 
 ## Running
@@ -105,4 +106,12 @@ AI for Carla Simulator
    or for normal mode execute
    ```bash
    /opt/carla/CarlaUE4.sh
+   ```
+2. Run ros-bridge
+   ```bash
+   roslaunch carla_ros_bridge carla_ros_bridge.launch town:=Town06
+   ```
+3. Run the Carla AI module
+   ```bash
+   roslaunch carla_ai carla_ai.launch
    ```

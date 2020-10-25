@@ -2,25 +2,26 @@ from typing import List
 
 import carla
 
-from carla_ai.sim import Simulation
 from carla_ai.av.model import WaypointWithSpeedLimit
 
 
 class Planner(object):
-    def __init__(self, sim: Simulation):
-        self.sim = sim
-        self.ego_location = None  # updated by StateUpdater
+    def __init__(self, map: carla.Map, ego: carla.Actor):
+        print('Actor ID: ', ego.id)
+        print('Actor type ID: ', ego.type_id)
+        self.map = map
+        self.ego = ego
+        self.ego_location = None
         self.path: List[WaypointWithSpeedLimit] = []
         self.num_waypoints = 20
-        self.speed_limit = 20  # 20 km/h
+        self.speed_limit = 3  # 20 km/h
 
     def plan(self) -> None:
-        if self.ego_location is None:
-            print('[WARN] Ego car position has not been initialized in planner')
-            return
+        self.ego_location = self.ego.get_transform().location
         if not self.path:
-            closest_wp = self.sim.map.get_waypoint(self.ego_location, lane_type=carla.LaneType.Driving)
+            closest_wp = self.map.get_waypoint(self.ego_location, lane_type=carla.LaneType.Driving)
             self.path = [self._make_wp_with_speed_limit(closest_wp)]
+            pass
         self._update_path()
 
     def _make_wp_with_speed_limit(self, wp: carla.Waypoint) -> WaypointWithSpeedLimit:
@@ -37,7 +38,7 @@ class Planner(object):
                 closest_wp_idx = idx
 
         # if the car goes off the track, then reset the path
-        if closest_distance > 5:
+        if closest_distance > 10:
             print('[WARN] The car is too far from the path. Resetting the path')
             self.path = []
             return

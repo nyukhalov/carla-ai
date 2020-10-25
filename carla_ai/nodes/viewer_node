@@ -1,0 +1,17 @@
+#!/usr/bin/env python
+from __future__ import print_function
+
+import rospy
+
+from carla_ai.ros_viewer import RosViewer
+
+
+def main():
+    rospy.init_node('carla_ai_viewer', anonymous=True)
+    role_name = rospy.get_param("~role_name", "ego_vehicle")
+    viewer_node = RosViewer(role_name)
+    viewer_node.run()
+
+
+if __name__ == '__main__':
+    main()

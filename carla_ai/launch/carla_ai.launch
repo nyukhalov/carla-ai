@@ -4,7 +4,7 @@
   <arg name='port' default='2000'/>
   <arg name='timeout' default='10'/>
   <arg name="vehicle_filter" default="vehicle.toyota.prius" />
-  <arg name="sensor_definition_file" default="$(find carla_ai_test)/config/sensors.json"/>
+  <arg name="sensor_definition_file" default="$(find carla_ai)/config/sensors.json"/>
   <arg name="role_name" default="ego_vehicle"/>
   <!-- use comma separated format "x,y,z,roll,pitch,yaw" -->
   <arg name="spawn_point" default=""/>
@@ -14,11 +14,25 @@
   <param name="/carla/port" value="$(arg port)" />
   <param name="/carla/timeout" value="$(arg timeout)" />
 
-  <node pkg="carla_ai_test" type="carla_ai_test.py" name="carla_ai_test_$(arg role_name)" output="screen">
+  <node pkg="carla_ai" type="ego_node" name="carla_ai_ego_$(arg role_name)" output="screen">
     <param name="sensor_definition_file" value="$(arg sensor_definition_file)" />
     <param name="vehicle_filter" value="$(arg vehicle_filter)" />
     <param name="spawn_point" value="$(arg spawn_point)" />
     <param name="role_name" value="$(arg role_name)" />
     <param name="spawn_ego_vehicle" value="$(arg spawn_ego_vehicle)" />
   </node>
+
+  <node pkg="carla_ai" type="viewer_node" name="carla_ai_viewer_$(arg role_name)" output="screen">
+    <param name="role_name" value="$(arg role_name)"/>
+  </node>
+
+  <node pkg="carla_ai" type="control_node" name="carla_ai_control_$(arg role_name)" output="screen">
+    <param name="role_name" value="$(arg role_name)"/>
+  </node>
+
+  <node pkg="carla_ai" type="planner_node" name="carla_ai_planner_$(arg role_name)" output="screen">
+    <param name="role_name" value="$(arg role_name)"/>
+  </node>
+
 </launch>
+

@@ -71,6 +71,7 @@ AI for Carla Simulator
   mkdir catkin_ws/src
   cd catkin_ws/src
   ln -s /path/to/ros-bridge
+  ln -s /path/to/carla-ai
   cd ..
   sudo rosdep init
   rosdep update
@@ -87,7 +88,7 @@ AI for Carla Simulator
   # for carla installed as Ubuntu package
   export PYTHONPATH="/opt/carla-simulator/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg:$PYTHONPATH"
   # for carla distr downloaded from github
-  export PYTHONPATH="/opt/carla-nightly/PythonAPI/carla/dist/carla-0.9.10-py3.7-linux-x86_64.egg:$PYTHONPATH"
+  export PYTHONPATH="/opt/carla-0.9.10.1/PythonAPI/carla/dist/carla-0.9.10-py3.7-linux-x86_64.egg:$PYTHONPATH"
   ```
 - Add the path to the system python to PYTHONPATH env variable
   ```bash

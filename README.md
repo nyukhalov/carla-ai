@@ -78,9 +78,14 @@ AI for Carla Simulator
   rosdep install --from-paths src --ignore-src -r
   catkin_make
   ```
+- Define the following environment variables
+  ```bash
+  export ACADOS_HOME="/path/to/acados"
+  export CARLA_HOME="/path/to/carla"
+  export CARLA_CATKIN_WS_PATH="/path/to/catkin_ws"
+  ```
 - Source the development script
   ```bash
-  cd catkins_ws
   source /path/to/carla-ai/scripts/devel.zsh
   ```
 

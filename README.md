@@ -5,6 +5,7 @@ AI for Carla Simulator
 ## Installation
 
 - Install [ROS Noetic](http://wiki.ros.org/noetic/Installation)
+- Install [Acados](https://github.com/acados/acados) and its python bindings
 - Follow [the official guide](https://carla.readthedocs.io/en/latest/start_quickstart/) to install Carla
 - Install [Carla ROS Bridge](https://github.com/carla-simulator/ros-bridge). The following changes should be made in order to compile it on Ubuntu 20.04
   ```diff

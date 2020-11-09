@@ -78,21 +78,10 @@ AI for Carla Simulator
   rosdep install --from-paths src --ignore-src -r
   catkin_make
   ```
-- Source the ROS scripts
+- Source the development script
   ```bash
-  source /opt/ros/noetic/setup.zsh
-  source devel/setup.zsh
-  ```
-- Add the path to the carla egg to PYTHONPATH env variable
-  ```bash
-  # for carla installed as Ubuntu package
-  export PYTHONPATH="/opt/carla-simulator/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg:$PYTHONPATH"
-  # for carla distr downloaded from github
-  export PYTHONPATH="/opt/carla-0.9.10.1/PythonAPI/carla/dist/carla-0.9.10-py3.7-linux-x86_64.egg:$PYTHONPATH"
-  ```
-- Add the path to the system python to PYTHONPATH env variable
-  ```bash
-  export PYTHONPATH="/usr/lib/python3/dist-packages:$PYTHONPATH"
+  cd catkins_ws
+  source /path/to/carla-ai/scripts/devel.zsh
   ```
 
 ## Running
@@ -100,12 +89,12 @@ AI for Carla Simulator
 1. Run Carla
    For headless mode execute
    ```bash
-   DISPLAY= /opt/carla/bin/CarlaUE4.sh -opengl
+   DISPLAY= /opt/carla-0.9.10.1/CarlaUE4.sh -opengl
    ```
 
    or for normal mode execute
    ```bash
-   /opt/carla/CarlaUE4.sh
+   /opt/carla-0.9.10.1/CarlaUE4.sh
    ```
 2. Run ros-bridge
    ```bash
@@ -114,4 +103,8 @@ AI for Carla Simulator
 3. Run the Carla AI module
    ```bash
    roslaunch carla_ai carla_ai.launch
+   ```
+4. Run waypoint-publisher
+   ```bash
+   roslaunch carla_waypoint_publisher carla_waypoint_publisher.launch
    ```

@@ -14,17 +14,26 @@ class Debugger(object):
         self._last_update_time = self._timestamp_now_ms()
 
     def tick(self, clock: pg.time.Clock):
-        lifetime = 0.1
+        lifetime = 5
         now = self._timestamp_now_ms()
         if now > self._last_update_time + (lifetime * 1000) - 50:
             color = carla.Color(0, 0, 200, 0)
             self._last_update_time = now
-            # visualize a few nearest waypoints
-            path = self._state_updater.path
-            for wp in path:
-                self._draw_waypoint(wp, color, lifetime=lifetime)
             # draw_bbox(self.debug, veh)
             # self._draw_position_vray(lifetime=lifetime)
+
+            if self._state_updater.goal:
+                g = self._state_updater.goal.pose
+                from_loc = carla.Location(g.position.x, -g.position.y, g.position.z)
+                to_loc = carla.Location(from_loc.x, from_loc.y, from_loc.z + 100)
+                self._debug_helper.draw_line(
+                    from_loc, to_loc, thickness=1.0, color=carla.Color(40, 255, 0), life_time=lifetime
+                )
+
+            path = self._state_updater.path
+            for idx, wp in enumerate(path):
+                if idx % 10 == 0:
+                    self._draw_waypoint(wp, color, lifetime=lifetime)
 
     def _timestamp_now_ms(self) -> int:
         return time.monotonic_ns() // 1000000
@@ -53,14 +62,14 @@ class Debugger(object):
         self._debug_helper.draw_box(
             carla.BoundingBox(loc, carla.Vector3D(inner_size, inner_size, inner_size)),
             rotation,
-            0.06,
-            color,
-            lifetime
+            thickness=0.06,
+            color=color,
+            life_time=lifetime
         )
         self._debug_helper.draw_box(
             carla.BoundingBox(loc, carla.Vector3D(outer_size, outer_size, outer_size)),
             rotation,
-            0.01,
-            carla.Color(0, 0, 0, 0),
-            lifetime
+            thickness=0.01,
+            color=carla.Color(0, 0, 0, 0),
+            life_time=lifetime
         )

@@ -1,0 +1,13 @@
+#!/usr/bin/env python
+import rospy
+from carla_ai.ros_mission_planner import RosMissionPlanner
+
+
+def main():
+    rospy.init_node('carla_ai_mission_planner', anonymous=True)
+    role_name = rospy.get_param("~role_name", "ego_vehicle")
+    RosMissionPlanner(role_name).run()
+
+
+if __name__ == '__main__':
+    main()

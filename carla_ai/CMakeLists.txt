@@ -29,6 +29,7 @@ catkin_install_python(PROGRAMS
                         nodes/ego_node
                         nodes/control_node
                         nodes/planner_node
+                        nodes/mission_planner_node
                       DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 install(DIRECTORY launch/

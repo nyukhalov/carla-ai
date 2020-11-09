@@ -6,7 +6,7 @@ import rospy
 import tf
 from carla_ai.msg import ControllerDebugInfo, PlannerPath, WaypointWithSpeedLimit
 from carla_msgs.msg import CarlaEgoVehicleStatus, CarlaEgoVehicleInfo, CarlaEgoVehicleInfoWheel, CarlaWorldInfo
-
+from geometry_msgs.msg import PoseStamped
 from carla_ai.av.model import VehicleInfo
 from carla_ai.position_utils import get_cur_location
 
@@ -29,6 +29,7 @@ class StateUpdater(object):
         self.veh_info: Optional[VehicleInfo] = None
         self.map_name: str = "Unknown"
         self.path: List[WaypointWithSpeedLimit] = []
+        self.goal: Optional[PoseStamped] = None
 
         self._tf_listener = tf.TransformListener()
         self._vehicle_info_subscriber = rospy.Subscriber(
@@ -57,6 +58,11 @@ class StateUpdater(object):
             PlannerPath,
             self._on_planner_path,
         )
+
+        self._goal_sub = rospy.Subscriber(f"/carla/{role_name}/goal", PoseStamped, self._on_goal)
+
+    def _on_goal(self, goal: PoseStamped) -> None:
+        self.goal = goal
 
     def _on_planner_path(self, msg: PlannerPath) -> None:
         self.path = msg.path
@@ -122,6 +128,7 @@ class StateUpdater(object):
         self._world_info_subscriber.unregister()
         self._controller_debug_info_subscriber.unregister()
         self._planner_path_sub.unregister()
+        self._goal_sub.unregister()
 
     def _get_veh_pos(self, center_pos: carla.Location, heading: float) -> carla.Location:
         """ Return the location of the center of the rear axle """

@@ -22,19 +22,11 @@
     <param name="spawn_ego_vehicle" value="$(arg spawn_ego_vehicle)" />
   </node>
 
-  <node pkg="carla_ai" type="viewer_node" name="carla_ai_viewer_$(arg role_name)" output="screen">
-    <param name="role_name" value="$(arg role_name)"/>
-  </node>
-
-  <node pkg="carla_ai" type="control_node" name="carla_ai_control_$(arg role_name)" output="screen">
-    <param name="role_name" value="$(arg role_name)"/>
-  </node>
-
   <node pkg="carla_ai" type="planner_node" name="carla_ai_planner_$(arg role_name)" output="screen">
     <param name="role_name" value="$(arg role_name)"/>
   </node>
 
-   <node pkg="carla_ai" type="mission_planner_node" name="carla_ai_mission_planner_$(arg role_name)" output="screen">
+  <node pkg="carla_ai" type="mission_planner_node" name="carla_ai_mission_planner_$(arg role_name)" output="screen">
     <param name="role_name" value="$(arg role_name)"/>
   </node>
 

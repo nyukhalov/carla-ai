@@ -1,2 +1,4 @@
 .idea/
 catkin_ws/
+c_generated_code/
+acados_ocp.json

@@ -2,13 +2,13 @@ from casadi import interpolant, vertcat, MX, types, tanh, cos, sin, Function
 import numpy as np
 from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver, AcadosOcpCost, AcadosOcpConstraints, AcadosOcpOptions
 import scipy.sparse.linalg
+import time
+
 
 class Config(object):
     def __init__(self):
-        self.Tf = 1.0  # prediction horizon
-        self.N = 50  # number of discretization steps
-        self.T = 10.00  # maximum simulation time[s]
-        self.Nsim = int(T * N / Tf)
+        self.pred_horizon = 1.0  # prediction horizon [sec]
+        self.pred_num_steps = 50  # number of discretization steps
 
         self.nsbx = 1  # ???
         self.nh = 5  # size of h
@@ -22,11 +22,15 @@ class Config(object):
         self.ny_e = self.nx
 
 
+def make_state(s: float, d: float, alpha: float, v: float, throttle: float, delta: float):
+    return np.array([s, d, alpha, v, throttle, delta])
+
 
 # have know idea what is kappa
 # always return 0 for now
 def kapparef_s(s: float) -> float:
     return 0
+
 
 # define acados ODE
 def make_model():
@@ -69,8 +73,8 @@ def make_model():
     Cr2 = 0.006
 
     # dynamics
-    Fxd = (Cm1 - Cm2 * v) * D - Cr2 * v * v - Cr0 * tanh(5 * v)
     sdota = (v * cos(alpha + C1 * delta)) / (1 - kapparef_s(s) * n)
+    Fxd = (Cm1 - Cm2 * v) * D - Cr2 * v * v - Cr0 * tanh(5 * v)
     f_expl = vertcat(
         sdota,  # s_dot
         v * sin(alpha + C1 * delta),  # n_dot
@@ -104,7 +108,7 @@ def make_model():
 
 
 def make_ocp_cost(config: Config) -> AcadosOcpCost:
-    unscale = config.N / config.Tf
+    unscale = config.pred_num_steps / config.pred_horizon
 
     Q = np.diag([ 1e-1, 1e-8, 1e-8, 1e-8, 1e-3, 5e-3 ])
     Qe = np.diag([ 5e0, 1e1, 1e-8, 1e-8, 5e-3, 2e-3 ])
@@ -121,7 +125,6 @@ def make_ocp_cost(config: Config) -> AcadosOcpCost:
 
     Vx_e = np.zeros((config.ny_e, config.nx))
     Vx_e[:config.nx, :config.nx] = np.eye(config.nx)
-
 
     # https://docs.acados.org/interfaces/#acados_template.acados_ocp.AcadosOcpCost
     cost = AcadosOcpCost()
@@ -149,9 +152,6 @@ def make_ocp_cost(config: Config) -> AcadosOcpCost:
     return cost
 
 def make_ocp_constraints(config: Config) -> AcadosOcpConstraints:
-    # https://docs.acados.org/interfaces/#acados_template.acados_ocp.AcadosOcpConstraints
-    constraints = AcadosOcpConstraints()
-
     # Model bounds
     n_min = -0.12  # width of the track [m]
     n_max = 0.12  # width of the track [m]
@@ -182,44 +182,39 @@ def make_ocp_constraints(config: Config) -> AcadosOcpConstraints:
     dthrottle_max = 10  # 10.0  # maximum throttle change rate
 
     # initial state
-    x0 = np.array([-2, 0, 0, 0, 0, 0])
+    x0 = make_state(
+        s = 0,
+        d = 0,
+        alpha = 0,
+        v = 0,
+        throttle = 0,
+        delta = 0
+    )
 
-    constraints.lbx = np.array([-12])  # lower bounds on x
-    constraints.ubx = np.array([12])  # upper bounds on x
-    constraints.idxbx = np.array([1])  # indexes of bounds on x (defines Jbx)
+    # https://docs.acados.org/interfaces/#acados_template.acados_ocp.AcadosOcpConstraints
+    constraints = AcadosOcpConstraints()
 
-    constraints.lbu = np.array([dthrottle_min, ddelta_min])  # lower bounds on u
-    constraints.ubu = np.array([dthrottle_max, ddelta_max])  # upper bounds on u
-    constraints.idxbu = np.array([0, 1])  # indexes of bounds on u (defines Jbu)
+    # lower/upper bounds on state
+    constraints.lbx = np.array([-12])
+    constraints.ubx = np.array([12])
+    constraints.idxbx = np.array([1])
+
+    # lower/upper boundas on controls
+    constraints.lbu = np.array([dthrottle_min, ddelta_min])
+    constraints.ubu = np.array([dthrottle_max, ddelta_max])
+    constraints.idxbu = np.array([0, 1])
 
     constraints.lsbx = np.zeros([config.nsbx])  # lower bounds on slacks corresponding to soft lower bounds on x
     constraints.usbx = np.zeros([config.nsbx])  # upper bounds on slacks corresponding to soft upper bounds on x
     constraints.idxsbx = np.array(range(config.nsbx))  # indexes of soft bounds on x within the indices of bounds on x
 
-    # lower bound for nonlinear inequalities h
-    constraints.lh = np.array(
-        [
-            along_min,
-            alat_min,
-            n_min,
-            throttle_min,
-            delta_min,
-        ]
-    )
-    # upper bound for nonlinear inequalities h
-    constraints.uh = np.array(
-        [
-            along_max,
-            alat_max,
-            n_max,
-            throttle_max,
-            delta_max,
-        ]
-    )
+    # lower/upper bounds for nonlinear inequalities h
+    constraints.lh = np.array([along_min, alat_min, n_min, throttle_min, delta_min])
+    constraints.uh = np.array([along_max, alat_max, n_max, throttle_max, delta_max])
+
     # lower/upper bounds on slacks corresponding to soft lower/upper bounds for nonlinear constraints
     constraints.lsh = np.zeros(config.nsh)
     constraints.ush = np.zeros(config.nsh)
-    # bounds on slacks corresponding to soft lower bounds for nonlinear constraints
     constraints.idxsh = np.array(range(config.nsh))
 
     # initial state
@@ -232,8 +227,7 @@ def make_ocp_options(config: Config) -> AcadosOcpOptions:
     options = AcadosOcpOptions()
 
     # set QP solver and integration
-    options.tf = config.Tf
-    # options.qp_solver = 'FULL_CONDENSING_QPOASES'
+    options.tf = config.pred_horizon  # prediction horizon
     options.qp_solver = "PARTIAL_CONDENSING_HPIPM"
     options.nlp_solver_type = "SQP"
     options.hessian_approx = "GAUSS_NEWTON"
@@ -247,10 +241,11 @@ def make_ocp_options(config: Config) -> AcadosOcpOptions:
 
     return options
 
+
 def make_ocp(config: Config) -> AcadosOcp:
     ocp = AcadosOcp()  # OCP - Optimal Control Problem ?
     ocp.model = make_model()
-    ocp.dims.N = config.N  # discretization
+    ocp.dims.N = config.pred_num_steps
     ocp.cost = make_ocp_cost(config)
     ocp.constraints = make_ocp_constraints(config)
     ocp.solver_options = make_ocp_options(config)
@@ -266,14 +261,90 @@ acados_solver = AcadosOcpSolver(ocp, json_file="acados_ocp.json")
 
 print("Running simulation")
 
+T = 10.00  # maximum simulation time [sec]
+Nsim = int(T * config.pred_num_steps / config.pred_horizon)
+
 # initialize data structs
-simX = np.ndarray((config.Nsim, config.nx))
-simU = np.ndarray((config.Nsim, config.nu))
-s0 = model.x0[0]
+simX = np.ndarray((Nsim, config.nx))
+simU = np.ndarray((Nsim, config.nu))
+s0 = 0
 tcomp_sum = 0
 tcomp_max = 0
+sref_N = 3  # reference for final reference progress
 
-for i in range(Nsim):
+for i in range(100):
+    # update reference
+    sref = s0 + sref_N
+    for step_no in range(config.pred_num_steps):
+        progress = step_no / config.pred_num_steps
+        yref_s = s0 + sref_N * progress
+        yref_n = 0
+        yref_alpha = 0
+        yref_v = 0
+        yref_D = 0
+        yref_delta = 0
+        yref_Ddot = 0
+        yref_deltadot = 0
+        yref = np.array([
+            yref_s,
+            yref_n,
+            yref_alpha,
+            yref_v,
+            yref_D,
+            yref_delta,
+            yref_Ddot,
+            yref_deltadot
+        ])
+        acados_solver.set(step_no, "yref", yref)
 
+    yref_N = np.array([s0 + sref_N, 0, 0, 0, 0, 0])
+    acados_solver.set(config.pred_num_steps, "yref", yref_N)
 
-print("Done")
+    # solve ocp
+    t = time.time()
+    status = acados_solver.solve()
+    elapsed = time.time() - t
+
+    if status != 0:
+        print("acados returned status {} in closed loop iteration {}.".format(status, i))
+
+    # manage timings
+    tcomp_sum += elapsed
+    if elapsed > tcomp_max:
+        tcomp_max = elapsed
+
+    # get solution
+    x0 = acados_solver.get(0, "x")
+    u0 = acados_solver.get(0, "u")
+    for j in range(config.nx):
+        simX[i, j] = x0[j]
+    for j in range(config.nu):
+        simU[i, j] = u0[j]
+
+    # update initial condition
+    x0 = acados_solver.get(1, "x")
+    acados_solver.set(0, "lbx", x0)
+    acados_solver.set(0, "ubx", x0)
+    s0 = x0[0]
+
+    # check if one lap is done and break and remove entries beyond
+    if False and s0 > Sref[-1] + 0.1:
+        # find where vehicle first crosses start line
+        N0 = np.where(np.diff(np.sign(simX[:, 0])))[0][0]
+        Nsim = i - N0  # correct to final number of simulation steps for plotting
+        simX = simX[N0:i, :]
+        simU = simU[N0:i, :]
+        break
+
+# Plot Results
+#t = np.linspace(0.0, Nsim * config.pred_horizon / config.pred_num_steps, Nsim)
+#plotRes(simX, simU, t)
+#plotTrackProj(simX, track)
+#plotalat(simX, simU, constraint, t)
+#plt.show()
+
+# Print some stats
+print("Average computation time: {}".format(tcomp_sum / Nsim))
+print("Maximum computation time: {}".format(tcomp_max))
+print("Average speed:{} m/s".format(np.average(simX[:, 3])))
+print("Lap time: {}s".format(config.pred_horizon * Nsim / config.pred_num_steps))
